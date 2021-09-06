@@ -373,6 +373,9 @@ button:hover {
 .right-image img {
     border-radius: 5px;
 }
+.right-image img {
+    margin-top: 36px;
+}
 .left-image img {
     margin-top: 36px;
 }
