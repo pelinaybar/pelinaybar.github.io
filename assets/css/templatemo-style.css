@@ -368,15 +368,13 @@ button:hover {
     padding-top: 60px;
     border-top: 2px solid rgba(250, 250, 250, 0.1);
 }
-.left-image-post {
-    margin-top: 70px;
-    padding-top: 60px;
-    border-top: 2px solid rgba(250, 250, 250, 0.1);
-}
 
 .left-image img,
 .right-image img {
     border-radius: 5px;
+}
+.left-image img {
+    margin-top: 64px;
 }
 
 .right-image-post h4,
