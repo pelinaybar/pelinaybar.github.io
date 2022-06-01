@@ -84,7 +84,141 @@ https://templatemo.com/tm-531-reflux
             <h2>HTML & CSS NEDİR?</h2>
             <div class="line-dec"></div>
             <span> 
-                “Hyper Text Markup Language” yani en bilinen adıyla HTML, Türkçe’de ‘Zengin Metin İşaretleme Dili’ olarak adlandırılmaktadır. Bir web sayfasının oluşturulmasında kullanılan HTML, .html ya da .htm uzantılarıyla ifade edilmektedir. 
+                “DENEME
+              
+              using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace Proje
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+          private void Filter()
+            {
+
+
+                if (checkBox2.Checked == false && checkBox2.Checked == false && checkBox3.Checked == false && checkBox4.Checked == false)
+                {
+                    for (int i = 0; i < dataGridView1.Rows.Count; i++) { dataGridView1.Rows[i].Visible = true; }
+
+                }
+                else if (checkBox1.Checked == true && checkBox2.Checked== true && checkBox3.Checked == true && checkBox4.Checked == true)
+                {
+                    for (int i = 0; i < dataGridView1.Rows.Count; i++) { dataGridView1.Rows[i].Visible = true; }
+                }
+                else
+                {
+                    for (int j = 0; j < dataGridView1.Rows.Count - 1; j++)
+                    {
+                        if (checkBox3.Checked == false && dataGridView1.Rows[j].Cells[2].Value.ToString() == "LENOVO")
+                        {
+                            dataGridView1.Rows[j].Visible = false;
+
+                        }
+                        if (checkBox2.Checked == false && dataGridView1.Rows[j].Cells[2].Value.ToString() == "HP")
+                        {
+                            dataGridView1.Rows[j].Visible = false;
+
+                        }
+                        if (checkBox4.Checked == false && dataGridView1.Rows[j].Cells[2].Value.ToString() == "MSI")
+                        {
+                            dataGridView1.Rows[j].Visible = false;
+                        }
+                        if (checkBox1.Checked == false && dataGridView1.Rows[j].Cells[2].Value.ToString() == "Dell") { dataGridView1.Rows[j].Visible = false; }
+                        if (checkBox9.Checked == false && dataGridView1.Rows[j].Cells[1].Value.ToString() == "AMD A9") { dataGridView1.Rows[j].Visible = false; }
+
+                        if (checkBox10.Checked == false && dataGridView1.Rows[j].Cells[1].Value.ToString() == "İNTEL CORE 7") { dataGridView1.Rows[j].Visible = false; }
+                        if (checkBox11.Checked == false && dataGridView1.Rows[j].Cells[1].Value.ToString() == "İNTEL CORE 3") { dataGridView1.Rows[j].Visible = false; }
+                        if (checkBox12.Checked == false && dataGridView1.Rows[j].Cells[1].Value.ToString() == "İNTEL CORE 5") { dataGridView1.Rows[j].Visible = false; };
+
+                        if (checkBox5.Checked == false && (Convert.ToDouble(dataGridView1.Rows[j].Cells[3].Value) <= 1999)) { dataGridView1.Rows[j].Visible = false; }
+                        if (checkBox6.Checked == false && (Convert.ToDouble(dataGridView1.Rows[j].Cells[3].Value) <= 3999)) { dataGridView1.Rows[j].Visible = false; }
+                        if (checkBox7.Checked == false && (Convert.ToDouble(dataGridView1.Rows[j].Cells[3].Value) <= 9999)) { dataGridView1.Rows[j].Visible = false; }
+                        if (checkBox8.Checked == false && (Convert.ToDouble(dataGridView1.Rows[j].Cells[3].Value) <= 10000)) { dataGridView1.Rows[j].Visible = false; }
+
+
+                    }
+
+
+                }
+
+
+
+            }
+
+            private void button1_Click(object sender, EventArgs e)
+            {
+
+                dataGridView1.Rows.Add();
+
+                Bitmap bmp = new Bitmap("C:/AAAA/DELL.jpg");
+            dataGridView1.Rows[0].Height = 100;
+            dataGridView1.Rows[0].Cells[0].Value = bmp;
+                dataGridView1.Rows[0].Cells[1].Value = "INTEL CORE 5";
+                dataGridView1.Rows[0].Cells[2].Value = "DELL";
+                dataGridView1.Rows[0].Cells[3].Value = "8183.89";
+                Filter();
+
+                dataGridView1.Rows.Add();
+                Bitmap bmp1 = new Bitmap("C:/AAAA/HP.jpg");
+            dataGridView1.Rows[1].Height = 100;
+            dataGridView1.Rows[1].Cells[0].Value = bmp1;
+                dataGridView1.Rows[1].Cells[1].Value = "INTEL CORE 3";
+                dataGridView1.Rows[1].Cells[2].Value = "HP";
+                dataGridView1.Rows[1].Cells[3].Value = "22794.18";
+                Filter();
+
+                dataGridView1.Rows.Add();
+                Bitmap bmp2 = new Bitmap("C:/AAAA/LENOVA.jpg");
+            dataGridView1.Rows[2].Height = 100;
+            dataGridView1.Rows[2].Cells[0].Value = bmp2;
+                dataGridView1.Rows[2].Cells[1].Value = "INTEL CORE 7";
+                dataGridView1.Rows[2].Cells[2].Value = "LENOVO";
+                dataGridView1.Rows[2].Cells[3].Value = "12345";
+                Filter();
+                dataGridView1.Rows.Add();
+                Bitmap bmp4 = new Bitmap("C:/AAAA/MSI.jpg");
+            dataGridView1.Rows[3].Height = 100;
+            dataGridView1.Rows[3].Cells[0].Value = bmp4;
+                dataGridView1.Rows[3].Cells[1].Value = "AMD 9";
+                dataGridView1.Rows[3].Cells[2].Value = "MSI";
+                dataGridView1.Rows[3].Cells[3].Value = "49876";
+                Filter();
+
+
+                Filter();
+
+
+
+
+        }
+        }
+    }
+    
+
+
+              
+              
+              
+              
+              ani en bilinen adıyla HTML, Türkçe’de ‘Zengin Metin İşaretleme Dili’ olarak adlandırılmaktadır. Bir web sayfasının oluşturulmasında kullanılan HTML, .html ya da .htm uzantılarıyla ifade edilmektedir. 
 
 Kodlama dilleri ile sıkça karıştırılan HTML, aslında betik bir dildir ve ‘tag’ yani etiket yapısından oluşturmaktadır. Açılan etiketlerin içerisinde yerleştirilen komutlar ile web sayfasının temel yapısını inşa etmekte kullanılan HTML, standart oluşturulmuş herhangi bir metnin web tarayıcıda görüntülenmesini sağlamaktadır. 
 
