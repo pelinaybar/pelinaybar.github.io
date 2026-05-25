@@ -1,0 +1,1 @@
+Bu pakette displayName alanları Türkçe karakterli hale getirildi ve gereksiz files kopyası klasörü kaldırıldı. Dosya adları sunucu uyumu için ASCII bırakıldı; Excel eşleşmesi displayName üzerinden Türkçe karakterli çalışır.
