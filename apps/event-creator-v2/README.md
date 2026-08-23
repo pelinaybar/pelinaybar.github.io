@@ -1,14 +1,28 @@
-# Versiyon 2 Etkinlik Oluşturucu
+# SKS Etkinlik Stüdyosu V2
 
-Bu klasör SKS Etkinlik Stüdyosu Versiyon 2 için GitHub Pages açılış sayfasını ve eksiksiz proje kaynaklarını içerir.
+Excel'den aktarılan öğrenci kulübü etkinliklerini Mail Bülteni, Instagram Post, Instagram Story ve haftalık özet tasarımlarına dönüştüren üretim sürümüdür.
 
-- `index.html`: GitHub Pages üzerinde açılan Versiyon 2 tanıtım/başlatma sayfası
-- `source/`: Uygulamanın tüm kaynak kodu, logoları, görselleri ve proje ayarları
-- Canlı uygulama: https://sks-etkinlik-studyosu.pelinikoyum.chatgpt.site
+**Canlı uygulama:** [pelinaybar.com/apps/event-creator-v2](https://pelinaybar.com/apps/event-creator-v2/)
 
-Kaynak projeyi yerel olarak çalıştırmak için `source` klasöründe:
+## Klasörler
+
+- `index.html` ve `_next/`: GitHub Pages için oluşturulan statik üretim çıktısı
+- `logos/`: Otomatik eşleştirmede kullanılan hazır kulüp logoları
+- `source/`: React, Next.js ve TypeScript kaynak kodları
+
+## Yerel çalıştırma
 
 ```bash
+cd source
 npm install
 npm run dev
 ```
+
+## Üretim
+
+```bash
+cd source
+npm run build
+```
+
+Uygulama GitHub Pages alt dizininde çalışacak şekilde `/apps/event-creator-v2` temel yoluyla derlenir.
