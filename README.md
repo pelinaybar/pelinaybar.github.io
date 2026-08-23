@@ -57,6 +57,7 @@ Bu depo, **pelinaybar.com** üzerinde yayınlanan web projelerini ve Üsküdar �
 - Çalışma taslakları ve sürüm geçmişi aynı cihazdaki tarayıcı depolamasında tutulur.
 - Site verileri temizlenirse yerel taslak ve geçmiş kayıtları da silinir.
 - Yeni Excel yüklemek mevcut çalışma verisini yeniler; önceki sürüm geçmişte korunur.
+- Ana sayfa, V1 ve V2 doğrudan bağlantıları aynı sekme tabanlı görsel erişim ekranını kullanır. Bu katman kullanıcı deneyimi amaçlıdır; sunucu taraflı kimlik doğrulama değildir.
 
 ## Proje yapısı
 

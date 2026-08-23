@@ -1,2 +1,3 @@
 :HL["/apps/event-creator-v2/_next/static/chunks/145qf.45n-260.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}},"staleTime":300,"buildId":"xM_z3N8SwxpLTnwb888eZ"}
+:HL["/assets/css/privacy-gate.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}},"staleTime":300,"buildId":"-GTswEtYc04kFYr9zudLA"}
