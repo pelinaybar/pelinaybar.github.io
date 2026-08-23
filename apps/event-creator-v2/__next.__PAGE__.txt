@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
 2:I[47257,["/apps/event-creator-v2/_next/static/chunks/05gg3cnw0j-03.js"],"ClientPageRoot"]
-3:I[31713,["/apps/event-creator-v2/_next/static/chunks/05gg3cnw0j-03.js","/apps/event-creator-v2/_next/static/chunks/14jt-hlcj8.cj.js"],"default"]
+3:I[31713,["/apps/event-creator-v2/_next/static/chunks/05gg3cnw0j-03.js","/apps/event-creator-v2/_next/static/chunks/0nfo-ldxh4j~~.js"],"default"]
 6:I[97367,["/apps/event-creator-v2/_next/static/chunks/05gg3cnw0j-03.js"],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/apps/event-creator-v2/_next/static/chunks/14jt-hlcj8.cj.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"4Q6v9Qh6zi_f0_oMTu0Xv"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/apps/event-creator-v2/_next/static/chunks/0nfo-ldxh4j~~.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"xM_z3N8SwxpLTnwb888eZ"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null

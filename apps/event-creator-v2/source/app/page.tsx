@@ -39,6 +39,14 @@ type EventItem = {
   order?: number;
   logoOverride?: string;
 };
+type DraftSnapshot = {
+  id: string;
+  at: string;
+  label: string;
+  events: EventItem[];
+};
+const DRAFT_KEY = "sks-event-studio-v2-draft";
+const HISTORY_KEY = "sks-event-studio-v2-history";
 const PUBLIC_BASE = "/apps/event-creator-v2";
 const FORMATS: Record<
   Format,
@@ -455,10 +463,14 @@ export default function Home() {
     [notice, setNotice] = useState("Kulüp logoları hazır"),
     [page, setPage] = useState(0),
     [quickOpen, setQuickOpen] = useState(false),
+    [logoManagerOpen, setLogoManagerOpen] = useState(false),
+    [historyOpen, setHistoryOpen] = useState(false),
+    [history, setHistory] = useState<DraftSnapshot[]>([]),
     [exporting, setExporting] = useState(false);
   const previewWrap = useRef<HTMLDivElement>(null),
     canvas = useRef<HTMLDivElement>(null),
-    dragged = useRef<string | null>(null);
+    dragged = useRef<string | null>(null),
+    hydrated = useRef(false);
   const grouped = useMemo(
     () =>
       Object.entries(
@@ -516,6 +528,55 @@ export default function Home() {
     ).sort(([a], [b]) => a.localeCompare(b));
   }, [format, grouped, page, socialPages]);
   useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+      const savedHistory = JSON.parse(
+        localStorage.getItem(HISTORY_KEY) || "[]",
+      ) as DraftSnapshot[];
+      if (saved?.events?.length) {
+        setEvents(saved.events);
+        setSelected(saved.events[0].id);
+      }
+      if (saved?.logos) setLogos((current) => ({ ...current, ...saved.logos }));
+      if (saved?.background) setBackground(saved.background);
+      setHistory(savedHistory);
+      if (saved?.events?.length) setNotice("Son çalışma geri yüklendi");
+    } catch {
+      setNotice("Kayıtlı taslak okunamadı; örnek çalışma açıldı");
+    } finally {
+      hydrated.current = true;
+    }
+  }, []);
+  useEffect(() => {
+    if (!hydrated.current) return;
+    const timer = window.setTimeout(() => {
+      try {
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({ events, logos, background, savedAt: new Date() }),
+        );
+        const previous = JSON.parse(
+          localStorage.getItem(HISTORY_KEY) || "[]",
+        ) as DraftSnapshot[];
+        const signature = JSON.stringify(events);
+        if (JSON.stringify(previous[0]?.events) !== signature) {
+          const snapshot: DraftSnapshot = {
+            id: crypto.randomUUID(),
+            at: new Date().toISOString(),
+            label: "Otomatik kayıt",
+            events,
+          };
+          const next = [snapshot, ...previous].slice(0, 25);
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+          setHistory(next);
+        }
+      } catch {
+        setNotice("Tarayıcı depolama alanı dolu; eski taslakları temizleyin");
+      }
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [events, logos, background]);
+  useEffect(() => {
     setPage(0);
   }, [format, events.length]);
   useEffect(() => {
@@ -567,6 +628,33 @@ export default function Home() {
       .sort()[0];
     return anchor ? displayWeekRange(anchor) : "Tarih Aralığı Seçilmedi";
   }, [events]);
+  function addHistory(label: string, items: EventItem[]) {
+    const snapshot: DraftSnapshot = {
+      id: crypto.randomUUID(),
+      at: new Date().toISOString(),
+      label,
+      events: items,
+    };
+    const next = [snapshot, ...history].slice(0, 25);
+    setHistory(next);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+  }
+  function restoreHistory(snapshot: DraftSnapshot) {
+    addHistory("Geri yüklemeden önce", events);
+    setEvents(snapshot.events);
+    setSelected(snapshot.events[0]?.id || "");
+    setHistoryOpen(false);
+    setNotice(
+      `${new Date(snapshot.at).toLocaleString("tr-TR")} sürümü geri yüklendi`,
+    );
+  }
+  const fileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   async function importExcel(file?: File) {
     if (!file) return;
     const wb = XLSX.read(await file.arrayBuffer(), {
@@ -593,20 +681,26 @@ export default function Home() {
       }))
       .filter((e) => e.date || e.title);
     if (mapped.length) {
+      addHistory("Yeni Excel yüklenmeden önce", events);
       setEvents(mapped);
       setSelected(mapped[0].id);
       setNotice(`${mapped.length} etkinlik Excel’den aktarıldı`);
     }
   }
-  function importLogos(files: FileList | null) {
+  async function importLogos(files: FileList | null) {
     if (!files) return;
     const next: Record<string, string> = {};
-    Array.from(files).forEach((file) => {
+    for (const file of Array.from(files))
       next[normalize(file.name.replace(/\.[^.]+$/, ""))] =
-        URL.createObjectURL(file);
-    });
+        await fileAsDataUrl(file);
     setLogos((p) => ({ ...p, ...next }));
     setNotice(`${files.length} logo eşleştirmeye hazır`);
+  }
+  async function replaceClubLogo(club: string, file?: File) {
+    if (!file) return;
+    const data = await fileAsDataUrl(file);
+    setLogos((current) => ({ ...current, [normalize(club)]: data }));
+    setNotice(`${club} logosu güncellendi ve taslağa kaydedildi`);
   }
   function update(id: string, key: keyof EventItem, value: string) {
     setEvents((current) => {
@@ -688,9 +782,9 @@ export default function Home() {
           ? "04-haftalik-ozet.png"
           : format === "summaryStory"
             ? "05-haftalik-ozet-story.png"
-          : format === "post"
-            ? `02-post-sayfa-${page + 1}.png`
-            : `03-story-sayfa-${page + 1}.png`;
+            : format === "post"
+              ? `02-post-sayfa-${page + 1}.png`
+              : `03-story-sayfa-${page + 1}.png`;
     const exportNode = document.querySelector<HTMLElement>(
       `[data-export-name="${exportName}"]`,
     );
@@ -760,6 +854,9 @@ export default function Home() {
     }
   }
   const selectedEvent = events.find((e) => e.id === selected);
+  const usedClubs = Array.from(
+    new Set(events.flatMap((event) => splitClubs(event.club))),
+  ).sort((a, b) => a.localeCompare(b, "tr-TR"));
   return (
     <main className="studio-shell">
       {quickOpen && selectedEvent && (
@@ -773,6 +870,22 @@ export default function Home() {
           }}
         />
       )}
+      {logoManagerOpen && (
+        <LogoManager
+          clubs={usedClubs}
+          logos={logos}
+          onClose={() => setLogoManagerOpen(false)}
+          onReplace={replaceClubLogo}
+          onFolder={importLogos}
+        />
+      )}
+      {historyOpen && (
+        <HistoryPanel
+          history={history}
+          onClose={() => setHistoryOpen(false)}
+          onRestore={restoreHistory}
+        />
+      )}
       <header className="topbar">
         <div className="brand-mark">SKS</div>
         <div>
@@ -783,6 +896,12 @@ export default function Home() {
           <span className="status">
             <i /> {notice}
           </span>
+          <button
+            className="download secondary"
+            onClick={() => setHistoryOpen(true)}
+          >
+            Geçmiş
+          </button>
           <button
             className="download secondary"
             disabled={exporting}
@@ -839,7 +958,11 @@ export default function Home() {
               />
               <ChevronDown size={17} />
             </label>
-            <label className="upload-row">
+            <button
+              type="button"
+              className="upload-row"
+              onClick={() => setLogoManagerOpen(true)}
+            >
               <span className="upload-icon logos">
                 <UsersRound size={18} />
               </span>
@@ -851,15 +974,8 @@ export default function Home() {
                     : "Dosya adına göre otomatik eşleşir"}
                 </small>
               </span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                {...({ webkitdirectory: "" } as object)}
-                onChange={(e) => importLogos(e.target.files)}
-              />
               <ChevronDown size={17} />
-            </label>
+            </button>
             <label className="upload-row">
               <span className="upload-icon bg">
                 <ImageIcon size={18} />
@@ -871,9 +987,9 @@ export default function Home() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const x = e.target.files?.[0];
-                  if (x) setBackground(URL.createObjectURL(x));
+                  if (x) setBackground(await fileAsDataUrl(x));
                 }}
               />
               <ChevronDown size={17} />
@@ -983,8 +1099,8 @@ export default function Home() {
                     : events.length
                 }
               />
-            {format === "summary" || format === "summaryStory" ? (
-              <SummaryGrid events={events} logos={logos} />
+              {format === "summary" || format === "summaryStory" ? (
+                <SummaryGrid events={events} logos={logos} />
               ) : (
                 <EventDesign
                   grouped={visibleGrouped}
@@ -1012,6 +1128,113 @@ export default function Home() {
     </main>
   );
 }
+function LogoManager({
+  clubs,
+  logos,
+  onClose,
+  onReplace,
+  onFolder,
+}: {
+  clubs: string[];
+  logos: Record<string, string>;
+  onClose: () => void;
+  onReplace: (club: string, file?: File) => void;
+  onFolder: (files: FileList | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const visible = clubs.filter((club) =>
+    normalize(club).includes(normalize(query)),
+  );
+  return (
+    <div className="quick-editor-backdrop manager-backdrop">
+      <section className="asset-manager">
+        <header>
+          <div>
+            <b>Kulüp logolarını yönet</b>
+            <small>Bir logoya tıklayarak yalnızca o kulübü güncelleyin.</small>
+          </div>
+          <button onClick={onClose}>×</button>
+        </header>
+        <div className="manager-tools">
+          <input
+            placeholder="Kulüp ara…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <label>
+            Logo klasörü yükle
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              {...({ webkitdirectory: "" } as object)}
+              onChange={(e) => onFolder(e.target.files)}
+            />
+          </label>
+        </div>
+        <div className="club-logo-list">
+          {visible.map((club) => (
+            <label className="club-logo-item" key={club}>
+              <ClubLogo name={club} logos={logos} />
+              <span>
+                <b>{club}</b>
+                <small>Logoyu değiştirmek için tıklayın</small>
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => onReplace(club, e.target.files?.[0])}
+              />
+            </label>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function HistoryPanel({
+  history,
+  onClose,
+  onRestore,
+}: {
+  history: DraftSnapshot[];
+  onClose: () => void;
+  onRestore: (snapshot: DraftSnapshot) => void;
+}) {
+  return (
+    <div className="quick-editor-backdrop manager-backdrop">
+      <section className="asset-manager history-manager">
+        <header>
+          <div>
+            <b>Çalışma geçmişi</b>
+            <small>Son 25 otomatik ve Excel öncesi sürüm saklanır.</small>
+          </div>
+          <button onClick={onClose}>×</button>
+        </header>
+        <div className="history-list">
+          {history.length ? (
+            history.map((snapshot) => (
+              <button key={snapshot.id} onClick={() => onRestore(snapshot)}>
+                <span>
+                  <b>{snapshot.label}</b>
+                  <small>
+                    {new Date(snapshot.at).toLocaleString("tr-TR")} ·{" "}
+                    {snapshot.events.length} etkinlik
+                  </small>
+                </span>
+                <em>Geri yükle</em>
+              </button>
+            ))
+          ) : (
+            <p>Henüz kayıtlı bir sürüm yok.</p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function QuickEditor({
   event,
   onClose,
@@ -1099,7 +1322,12 @@ function QuickEditor({
               accept="image/*"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) onUpdate("logoOverride", URL.createObjectURL(file));
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = () =>
+                    onUpdate("logoOverride", String(reader.result));
+                  reader.readAsDataURL(file);
+                }
               }}
             />
             <em>
@@ -1326,7 +1554,7 @@ function SummaryGrid({
             style={{ "--c": c.color, "--soft": c.soft } as React.CSSProperties}
           >
             <div className="summary-date">
-                  <span>{shortDayName(date)}</span>
+              <span>{shortDayName(date)}</span>
               <b>{new Date(`${date}T12:00:00`).getDate()}</b>
             </div>
             {holiday && (

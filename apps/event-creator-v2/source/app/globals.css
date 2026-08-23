@@ -120,3 +120,18 @@ html,body{min-height:100%;overflow-x:hidden;overflow-y:auto}.studio-shell{min-he
 .post .design-card .meta .campus,.story .design-card .meta .campus{justify-self:auto!important;max-width:none!important;position:relative!important;padding-left:13px!important}
 .post .design-card .meta .campus:before,.story .design-card .meta .campus:before{content:"•";position:absolute;left:0;color:#A7B5B1}
 .batch-exports .post .design-card .meta,.batch-exports .story .design-card .meta{display:flex!important;justify-content:flex-start!important;gap:14px!important}
+
+/* Logo yöneticisi ve yerel sürüm geçmişi */
+button.upload-row{width:100%;color:var(--ink);text-align:left;background:#fff}
+.manager-backdrop{z-index:140;padding:48px 16px;overflow:auto}
+.asset-manager{width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 96px);background:#fff;border-radius:20px;box-shadow:0 28px 90px #102d2855;display:flex;flex-direction:column;overflow:hidden}
+.asset-manager>header{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px}
+.asset-manager>header>div{display:flex;flex-direction:column;gap:3px}.asset-manager>header b{font-size:15px}.asset-manager>header small{font-size:10px;color:#718481}
+.asset-manager>header button{margin-left:auto;width:32px;height:32px;border:0;border-radius:9px;background:#edf6f5;color:#45605d;font-size:21px;font-weight:900;cursor:pointer}
+.manager-tools{padding:14px 18px;display:flex;gap:10px;border-bottom:1px solid var(--line)}
+.manager-tools>input{min-width:0;flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
+.manager-tools>label{background:var(--sks-teal);color:#fff;border-radius:10px;padding:10px 13px;font-size:10px;font-weight:800;cursor:pointer}.manager-tools>label input{display:none}
+.club-logo-list{padding:14px 18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:9px;overflow:auto}
+.club-logo-item{border:1px solid var(--line);border-radius:13px;padding:10px;display:flex;align-items:center;gap:11px;cursor:pointer;background:#fbfdfc}.club-logo-item:hover{border-color:#8fcfcb;background:#f1faf9}.club-logo-item .club-logo{width:46px;height:46px;flex:none}.club-logo-item>span{min-width:0;display:flex;flex-direction:column;gap:3px}.club-logo-item b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.club-logo-item small{font-size:8px;color:#7a8d88}.club-logo-item input{display:none}
+.history-list{padding:14px 18px 20px;display:flex;flex-direction:column;gap:8px;overflow:auto}.history-list>button{border:1px solid var(--line);background:#fbfdfc;border-radius:12px;padding:12px;display:flex;align-items:center;text-align:left;cursor:pointer}.history-list>button:hover{border-color:#8fcfcb;background:#f1faf9}.history-list>button span{display:flex;flex:1;flex-direction:column;gap:3px}.history-list b{font-size:11px}.history-list small{font-size:9px;color:#758681}.history-list em{font-style:normal;font-size:9px;font-weight:850;color:var(--sks-teal-dark)}.history-list p{text-align:center;color:#758681;font-size:11px;padding:24px}
+@media(max-width:620px){.club-logo-list{grid-template-columns:1fr}.manager-tools{flex-direction:column}}
