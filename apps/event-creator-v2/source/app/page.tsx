@@ -24,6 +24,7 @@ import {
   Upload,
   UsersRound,
 } from "lucide-react";
+import { siFacebook, siInstagram, siYoutube, siX } from "simple-icons";
 
 type Format = "mail" | "post" | "story" | "summary" | "summaryStory";
 type EventItem = {
@@ -1357,6 +1358,15 @@ function SummaryGrid({
     </div>
   );
 }
+const LINKEDIN_PATH =
+  "M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452z";
+function SocialIcon({ label, path }: { label: string; path: string }) {
+  return (
+    <svg viewBox="0 0 24 24" role="img" aria-label={label}>
+      <path d={path} fill="currentColor" />
+    </svg>
+  );
+}
 function DesignFooter() {
   return (
     <footer className="design-footer">
@@ -1380,11 +1390,11 @@ function DesignFooter() {
       </div>
       <div className="footer-social">
         <div>
-          <b>f</b>
-          <b>◎</b>
-          <b>in</b>
-          <b>▶</b>
-          <b>𝕏</b>
+          <SocialIcon label="Facebook" path={siFacebook.path} />
+          <SocialIcon label="Instagram" path={siInstagram.path} />
+          <SocialIcon label="YouTube" path={siYoutube.path} />
+          <SocialIcon label="LinkedIn" path={LINKEDIN_PATH} />
+          <SocialIcon label="X" path={siX.path} />
         </div>
         <span>@uskudarsks</span>
       </div>

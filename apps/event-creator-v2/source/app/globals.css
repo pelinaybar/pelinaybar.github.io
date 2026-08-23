@@ -102,3 +102,14 @@ html,body{min-height:100%;overflow-x:hidden;overflow-y:auto}.studio-shell{min-he
 .batch-exports .footer-center{justify-self:center!important;align-items:center!important}
 .batch-exports .footer-social{justify-self:end!important;align-items:flex-end!important}
 .batch-exports .footer-center img{flex:none!important}
+
+/* Beş sosyal medya ikonu eşit aralıklı ve çıktı kenarından uzakta kalır */
+.footer-social{padding-right:8px!important;overflow:visible!important}
+.footer-social>div{display:grid!important;grid-template-columns:repeat(5,20px)!important;align-items:center!important;justify-content:end!important;gap:4px!important;width:116px!important;overflow:visible!important}
+.footer-social>div b{width:20px!important;height:20px!important;display:grid!important;place-items:center!important;font-size:14px!important;line-height:1!important;overflow:visible!important}
+.footer-social>div b:nth-child(3){font-size:12px!important}
+.footer-social>div b:nth-child(4){font-size:11px!important;font-family:Arial,sans-serif!important}
+.batch-exports .footer-social{padding-right:8px!important;overflow:visible!important}
+.batch-exports .footer-social>div{width:116px!important;min-width:116px!important;overflow:visible!important}
+.footer-social>div svg{display:block!important;width:17px!important;height:17px!important;color:#173A46!important;overflow:visible!important;justify-self:center!important}
+.batch-exports .footer-social>div svg{display:block!important;width:17px!important;height:17px!important;min-width:17px!important;min-height:17px!important;overflow:visible!important}
