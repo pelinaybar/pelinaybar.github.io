@@ -93,3 +93,12 @@ html,body{min-height:100%;overflow-x:hidden;overflow-y:auto}.studio-shell{min-he
 .story .design-card .meta{gap:18px!important}
 .batch-exports .design-card .meta{display:grid!important;grid-template-columns:minmax(0,1fr) max-content!important;width:100%!important;flex-wrap:nowrap!important}
 .batch-exports .design-card .meta span{width:auto!important;max-width:100%!important;white-space:nowrap!important;word-break:keep-all!important;line-height:1!important}
+
+/* PNG çıktısında kurumsal alt barın sütunları ve satırları kaymaz */
+.batch-exports .design-footer{display:grid!important;grid-template-columns:1fr 1.65fr 1fr!important;align-items:center!important;height:94px!important;min-height:94px!important;padding:0 34px!important;gap:18px!important;overflow:hidden!important}
+.batch-exports .design-footer>div{min-width:0!important;max-width:100%!important}
+.batch-exports .footer-info span,.batch-exports .footer-info b,.batch-exports .footer-center strong,.batch-exports .footer-social span,.batch-exports .footer-social b{white-space:nowrap!important;word-break:keep-all!important}
+.batch-exports .footer-info{justify-self:start!important;align-items:flex-start!important}
+.batch-exports .footer-center{justify-self:center!important;align-items:center!important}
+.batch-exports .footer-social{justify-self:end!important;align-items:flex-end!important}
+.batch-exports .footer-center img{flex:none!important}
