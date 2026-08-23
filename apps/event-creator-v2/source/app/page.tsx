@@ -25,7 +25,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-type Format = "mail" | "post" | "story" | "summary";
+type Format = "mail" | "post" | "story" | "summary" | "summaryStory";
 type EventItem = {
   id: string;
   club: string;
@@ -69,6 +69,13 @@ const FORMATS: Record<
     size: "1080 × 1350",
     w: 1080,
     h: 1350,
+    icon: LayoutGrid,
+  },
+  summaryStory: {
+    label: "Özet Story",
+    size: "1080 × 1920",
+    w: 1080,
+    h: 1920,
     icon: LayoutGrid,
   },
 };
@@ -350,6 +357,10 @@ const dayName = (iso: string) =>
   new Intl.DateTimeFormat("tr-TR", { weekday: "long" }).format(
     new Date(`${iso}T12:00:00`),
   );
+const shortDayName = (iso: string) =>
+  ["PAZ", "PZT", "SAL", "ÇAR", "PER", "CUM", "CMT"][
+    new Date(`${iso}T12:00:00`).getDay()
+  ];
 const weekBounds = (iso: string) => {
   const start = new Date(`${iso}T12:00:00`),
     day = (start.getDay() + 6) % 7;
@@ -674,6 +685,8 @@ export default function Home() {
         ? "01-mail-bulteni.png"
         : format === "summary"
           ? "04-haftalik-ozet.png"
+          : format === "summaryStory"
+            ? "05-haftalik-ozet-story.png"
           : format === "post"
             ? `02-post-sayfa-${page + 1}.png`
             : `03-story-sayfa-${page + 1}.png`;
@@ -945,7 +958,7 @@ export default function Home() {
           </div>
           <div className="canvas-stage">
             <div
-              className={`design-canvas ${format}`}
+              className={`design-canvas ${format === "summaryStory" ? "summary summary-story" : format}`}
               ref={canvas}
               style={{
                 width: f.w,
@@ -969,8 +982,8 @@ export default function Home() {
                     : events.length
                 }
               />
-              {format === "summary" ? (
-                <SummaryGrid events={events} logos={logos} />
+            {format === "summary" || format === "summaryStory" ? (
+              <SummaryGrid events={events} logos={logos} />
               ) : (
                 <EventDesign
                   grouped={visibleGrouped}
@@ -1238,8 +1251,14 @@ function EventDesign({
         return (
           <section className="day-section" key={date}>
             <div className="day-label" style={{ background: dayColor }}>
-              <b>{displayDate(date)}</b>
-              <span>{dayName(date)}</span>
+              {format === "mail" ? (
+                <>
+                  <b>{displayDate(date)}</b>
+                  <span>{dayName(date)}</span>
+                </>
+              ) : (
+                <b>{dayName(date)}</b>
+              )}
             </div>
             {rows.map((row, i) => (
               <div
@@ -1306,7 +1325,7 @@ function SummaryGrid({
             style={{ "--c": c.color, "--soft": c.soft } as React.CSSProperties}
           >
             <div className="summary-date">
-              <span>{dayName(date).slice(0, 3)}</span>
+                  <span>{shortDayName(date)}</span>
               <b>{new Date(`${date}T12:00:00`).getDate()}</b>
             </div>
             {holiday && (
@@ -1476,6 +1495,17 @@ function BatchExports({
         data-export-width="1080"
         data-export-height="1350"
         style={{ width: 1080, height: 1350, backgroundImage: bg }}
+      >
+        <DesignHeader range={range} count={events.length} />
+        <SummaryGrid events={events} logos={logos} />
+        <DesignFooter />
+      </div>
+      <div
+        className="design-canvas summary summary-story"
+        data-export-name="05-haftalik-ozet-story.png"
+        data-export-width="1080"
+        data-export-height="1920"
+        style={{ width: 1080, height: 1920, backgroundImage: bg }}
       >
         <DesignHeader range={range} count={events.length} />
         <SummaryGrid events={events} logos={logos} />
