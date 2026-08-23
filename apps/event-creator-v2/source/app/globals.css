@@ -113,3 +113,10 @@ html,body{min-height:100%;overflow-x:hidden;overflow-y:auto}.studio-shell{min-he
 .batch-exports .footer-social>div{width:116px!important;min-width:116px!important;overflow:visible!important}
 .footer-social>div svg{display:block!important;width:17px!important;height:17px!important;color:#173A46!important;overflow:visible!important;justify-self:center!important}
 .batch-exports .footer-social>div svg{display:block!important;width:17px!important;height:17px!important;min-width:17px!important;min-height:17px!important;overflow:visible!important}
+
+/* Post ve Story'de yerleşke, ilişkili olduğu konum bilgisinin yanında durur */
+.post .design-card .meta,.story .design-card .meta{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:14px!important;width:100%!important;flex-wrap:nowrap!important}
+.post .design-card .meta span,.story .design-card .meta span{flex:none!important;max-width:65%!important}
+.post .design-card .meta .campus,.story .design-card .meta .campus{justify-self:auto!important;max-width:none!important;position:relative!important;padding-left:13px!important}
+.post .design-card .meta .campus:before,.story .design-card .meta .campus:before{content:"•";position:absolute;left:0;color:#A7B5B1}
+.batch-exports .post .design-card .meta,.batch-exports .story .design-card .meta{display:flex!important;justify-content:flex-start!important;gap:14px!important}
