@@ -70,3 +70,7 @@ html,body{min-height:100%;overflow-x:hidden;overflow-y:auto}.studio-shell{min-he
 .holiday-badge span{font-size:8px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;opacity:.8}
 .holiday-badge b{font-size:11px;line-height:1.15}
 .holiday-day .summary-logos{padding-top:5px}
+
+/* Export-safe mail headings */
+.mail .day-label{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:20px!important}
+.mail .day-label b,.mail .day-label span{white-space:nowrap!important;word-break:keep-all!important;flex:none!important}
