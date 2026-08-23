@@ -82,3 +82,14 @@ html,body{min-height:100%;overflow-x:hidden;overflow-y:auto}.studio-shell{min-he
 .story .card-head:has(.logo-group.count-1)>span{font-size:23px!important;line-height:1.16!important}
 .story .card-head:has(.logo-group.count-2)>span{font-size:19px!important;line-height:1.18!important}
 .story .card-head:has(.logo-group.count-3)>span{font-size:16px!important;line-height:1.2!important}
+
+/* Konum ve yerleşke her kartta aynı hizada, tek satırda kalır */
+.design-card .meta{display:grid!important;grid-template-columns:minmax(0,1fr) max-content!important;align-items:center!important;gap:12px!important;flex-wrap:nowrap!important;width:100%}
+.design-card .meta span{min-width:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;display:flex!important;flex-wrap:nowrap!important}
+.design-card .meta .campus{justify-self:end!important;overflow:visible!important;text-overflow:clip!important}
+.mail .design-card .meta{gap:5px!important}
+.mail .design-card .meta span{font-size:7.5px!important}
+.post .design-card .meta{gap:14px!important}
+.story .design-card .meta{gap:18px!important}
+.batch-exports .design-card .meta{display:grid!important;grid-template-columns:minmax(0,1fr) max-content!important;width:100%!important;flex-wrap:nowrap!important}
+.batch-exports .design-card .meta span{width:auto!important;max-width:100%!important;white-space:nowrap!important;word-break:keep-all!important;line-height:1!important}
