@@ -74,3 +74,11 @@ html,body{min-height:100%;overflow-x:hidden;overflow-y:auto}.studio-shell{min-he
 /* Export-safe mail headings */
 .mail .day-label{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:20px!important}
 .mail .day-label b,.mail .day-label span{white-space:nowrap!important;word-break:keep-all!important;flex:none!important}
+
+/* Kulüp adı, karttaki logo sayısına göre orantılı ölçeklenir */
+.post .card-head:has(.logo-group.count-1)>span{font-size:18px!important;line-height:1.18!important}
+.post .card-head:has(.logo-group.count-2)>span{font-size:15px!important;line-height:1.2!important}
+.post .card-head:has(.logo-group.count-3)>span{font-size:13px!important;line-height:1.22!important}
+.story .card-head:has(.logo-group.count-1)>span{font-size:23px!important;line-height:1.16!important}
+.story .card-head:has(.logo-group.count-2)>span{font-size:19px!important;line-height:1.18!important}
+.story .card-head:has(.logo-group.count-3)>span{font-size:16px!important;line-height:1.2!important}
