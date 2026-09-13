@@ -1,3 +1,4 @@
 User-agent: *
-Disallow: /
-Noindex: /
+Allow: /
+
+Sitemap: https://pelinaybar.com/sitemap.xml
