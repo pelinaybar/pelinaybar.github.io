@@ -1,33 +1,61 @@
-
-(function(){
+(function () {
   const PASSWORD_HASH = 'deb114395272d4f2a20043c583fd028215f8bb598248ccb81ae33c4946f54556';
-  const STORAGE_KEY = 'private_site_access_granted_v1';
+
   document.documentElement.classList.add('privacy-locked');
-  async function sha256(text){
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+  async function sha256(text) {
+    const data = new TextEncoder().encode(text);
+    const buffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buffer))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
   }
-  function unlock(){
-    sessionStorage.setItem(STORAGE_KEY,'1');
+
+  function unlock() {
     document.documentElement.classList.remove('privacy-locked');
-    const gate=document.getElementById('privacyGate');
-    if(gate) gate.remove();
+    document.getElementById('privacyGate')?.remove();
   }
-  function showGate(){
-    if(sessionStorage.getItem(STORAGE_KEY)==='1') return unlock();
-    const gate=document.createElement('div');
-    gate.id='privacyGate';
-    gate.innerHTML=`<div class="privacy-card"><h1>Özel erişim</h1><p>Bu sayfa arama motorlarına kapalıdır. Devam etmek için erişim kodunu girin.</p><input id="privacyPassword" type="password" autocomplete="current-password" placeholder="Erişim kodu" autofocus><button id="privacyButton">Giriş Yap</button><div class="privacy-error" id="privacyError"></div><p class="privacy-note">Kod doğrulanınca bu sekmede site açılır.</p></div>`;
+
+  function showGate() {
+    const gate = document.createElement('div');
+    gate.id = 'privacyGate';
+    gate.setAttribute('role', 'dialog');
+    gate.setAttribute('aria-modal', 'true');
+    gate.setAttribute('aria-labelledby', 'privacyTitle');
+    gate.innerHTML = `
+      <div class="privacy-card">
+        <h1 id="privacyTitle">Özel erişim</h1>
+        <p>Bu sayfa herkese açık değildir. Devam etmek için erişim kodunu girin.</p>
+        <form id="privacyForm">
+          <label class="sr-only" for="privacyPassword">Erişim kodu</label>
+          <input id="privacyPassword" type="password" autocomplete="off" placeholder="Erişim kodu" required autofocus>
+          <button type="submit">Giriş Yap</button>
+        </form>
+        <div class="privacy-error" id="privacyError" aria-live="polite"></div>
+        <p class="privacy-note">Her sayfa açılışında kod yeniden istenir.</p>
+      </div>`;
     document.body.appendChild(gate);
-    const input=gate.querySelector('#privacyPassword');
-    const btn=gate.querySelector('#privacyButton');
-    const err=gate.querySelector('#privacyError');
-    async function submit(){
-      const ok=(await sha256(input.value.trim()))===PASSWORD_HASH;
-      if(ok) unlock(); else { err.textContent='Erişim kodu hatalı.'; input.value=''; input.focus(); }
-    }
-    btn.addEventListener('click',submit);
-    input.addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
+
+    const form = gate.querySelector('#privacyForm');
+    const input = gate.querySelector('#privacyPassword');
+    const error = gate.querySelector('#privacyError');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const isValid = (await sha256(input.value.trim())) === PASSWORD_HASH;
+      if (isValid) {
+        unlock();
+      } else {
+        error.textContent = 'Erişim kodu hatalı.';
+        input.value = '';
+        input.focus();
+      }
+    });
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',showGate); else showGate();
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showGate, { once: true });
+  } else {
+    showGate();
+  }
 })();
