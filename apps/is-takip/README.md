@@ -44,3 +44,5 @@ Masaüstünde kartlar pano sütunları arasında sürüklenebilir. Öğrenciler 
 Sağ üstteki hesap menüsünden Profil ve hesap ayarları açılır. Görünen ad ve avatar rengi Supabase kullanıcı profil metadatasında saklanır; bunlar yalnızca görünümü etkiler. Yetkilendirme kullanıcı metadatasına dayanmaz; görevlerdeki resmi ekip adı ve izin listesi yönetici kontrolündedir.
 
 Giriş ekranındaki Şifremi unuttum bağlantısı şifre yenileme e-postası gönderir. Doğrulanan yenileme bağlantısı panoya döndüğünde yeni şifre formu açılır. Authentication URL Configuration ayarlarında pano adresinin izinli olması gerekir. Şifre değiştirme yalnızca kullanıcının kendi oturumunda yapılır. Profil ekranında bu cihazdan çıkış ve diğer oturumları kapatma seçenekleri vardır. Diğer oturumların yenileme erişimi sonlanır; mevcut erişim tokenları süreleri dolana kadar geçerli kalabilir.
+
+Görev silme ve geri alma yalnızca yöneticiye açıktır. Silme işlemi görevleri `Silinen görevler` bölümüne taşır; yorumlar ve işlem geçmişi korunur. Öğrenciler silinen görevlere API üzerinden de erişemez; kalıcı DELETE izni verilmez.
