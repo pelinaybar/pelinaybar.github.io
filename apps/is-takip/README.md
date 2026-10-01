@@ -1,4 +1,4 @@
-# SKS Dijital Kanallar iş takibi
+# Dijital Kanallar Birimi iş takibi
 
 GitHub Pages yalnızca uygulama dosyalarını yayınlar. Görevler ve giriş izinleri Supabase'de tutulur. Kaynak koddaki publishable anahtar herkese açıktır; erişim veritabanı RLS politikalarıyla sınırlandırılır. Service-role anahtarı kullanılmaz.
 
