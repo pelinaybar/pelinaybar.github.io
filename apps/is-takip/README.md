@@ -46,3 +46,13 @@ Sağ üstteki hesap menüsünden Profil ve hesap ayarları açılır. Görünen 
 Giriş ekranındaki Şifremi unuttum bağlantısı şifre yenileme e-postası gönderir. Doğrulanan yenileme bağlantısı panoya döndüğünde yeni şifre formu açılır. Authentication URL Configuration ayarlarında pano adresinin izinli olması gerekir. Şifre değiştirme yalnızca kullanıcının kendi oturumunda yapılır. Profil ekranında bu cihazdan çıkış ve diğer oturumları kapatma seçenekleri vardır. Diğer oturumların yenileme erişimi sonlanır; mevcut erişim tokenları süreleri dolana kadar geçerli kalabilir.
 
 Görev silme ve geri alma yalnızca yöneticiye açıktır. Silme işlemi görevleri `Silinen görevler` bölümüne taşır; yorumlar ve işlem geçmişi korunur. Öğrenciler silinen görevlere API üzerinden de erişemez; kalıcı DELETE izni verilmez.
+
+## Ekip iletişimi
+
+Ekip sohbeti tüm aktif yetkililere açıktır. Görev konuşmalarını yönetici, sorumlu ve destek ekibi görebilir; silinen görevlerin konuşmaları erişime kapanır. Mesaj kaldırma ve paylaşılan ekleri temizleme yalnızca yöneticiye açıktır.
+
+Dosyalar `sks-chat` özel Storage alanına yüklenir ve oturum açmış kullanıcıların yetkileriyle indirilir. GitHub'da mesaj, belge veya görsel tutulmaz. Mesaj başına en fazla 5 dosya, dosya başına 20 MB; JPG/PNG/WEBP/GIF, PDF/TXT, Word/Excel/PowerPoint desteklenir. HTML/SVG ve çalıştırılabilir dosyalar kabul edilmez. Dosyalar değiştirilmez; yeni paylaşım yeni nesne oluşturur.
+
+Anlık mesaj yenileme Realtime ile çalışır; görünür sekmede 10 saniyelik yenileme bağlantı kesintileri için yedektir. Sohbet taslağı yenilemelerde korunur. Okunmamış mesaj sayısı menüde, görev konuşmaları da ekip sohbetindeki kısayollarda görünür. Öğrenci etiketleri mesaj üzerinde gösterilir. Harici e-posta veya tarayıcı push bildirimi gönderilmez.
+
+Günlük yedekler mesajları, okuma durumlarını ve dosya bilgilerini kapsar; Storage dosyalarının içeriği JSON yedeğine dahil değildir. Kaldırılan mesajların kayıtları yönetim amacıyla saklanır; ekleri Storage API ile temizlenir. Kullanıcının önceden indirdiği dosyalar geri alınamaz.
