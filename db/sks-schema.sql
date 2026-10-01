@@ -50,3 +50,22 @@ elsif p_action='publication' then if r<>'manager' then raise exception 'Yönetic
 else raise exception 'Geçersiz işlem.';end if;end if;return public.sks_state();end $$;
 revoke all on function public.sks_state(),public.sks_apply(text,jsonb) from public,anon,authenticated;
 grant execute on function public.sks_state(),public.sks_apply(text,jsonb) to authenticated;
+create function sks_private.enforce_registration_allowlist()
+returns trigger language plpgsql security definer set search_path='' as $$
+begin
+  -- Signup has no auth.uid yet. Only this auth.users trigger can invoke the
+  -- private function; API roles have no execute permission or schema access.
+  if new.email is null or not exists (
+    select 1 from sks_private.access_list a
+    left join public.sks_members m on m.id=a.member_id
+    where a.email=lower(trim(new.email)) and a.active
+      and (a.role='manager' or m.active)
+  ) then
+    raise exception 'Bu e-posta için kayıt izni yok.' using errcode='42501';
+  end if;
+  return new;
+end $$;
+revoke all on function sks_private.enforce_registration_allowlist() from public,anon,authenticated,supabase_auth_admin;
+create trigger sks_registration_allowlist
+before insert or update of email on auth.users
+for each row execute function sks_private.enforce_registration_allowlist();
