@@ -15,7 +15,7 @@
 
 | Project | What it does | Open |
 |---|---|---|
-| **SKS Task Tracker** | Private task assignments, submissions, approvals and reports backed by Supabase Auth and Postgres RLS. | [Open Tracker →](https://pelinaybar.com/apps/is-takip/) |
+| **SKS Task Tracker** | Private assignments, calendar, templates, checklists, workload, notifications, audit history and daily record snapshots backed by Supabase Auth and Postgres RLS. | [Open Tracker →](https://pelinaybar.com/apps/is-takip/) |
 | **SKS Carousel Design Studio** | Creates multi-slide club and event designs for Instagram Post, Story, and Web formats. | [Launch Studio →](https://pelinaybar.com/apps/sks-carousel/) |
 | **SKS Event Studio V2** | Converts Excel event data into mail bulletins, social posts, stories, and weekly summaries. | [Launch V2 →](https://pelinaybar.com/apps/event-creator-v2/) |
 | **Event Creator V1** | The original browser-based SKS event poster creator. | [Launch V1 →](https://pelinaybar.com/apps/event-creator/) |

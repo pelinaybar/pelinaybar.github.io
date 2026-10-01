@@ -18,3 +18,17 @@ Depo kökünde `npm ci` ardından `npm run check:tracker` ve `npm run build:trac
 Kaynak `src/config.js` yalnızca proje URL'si ve publishable anahtarı içerir. Öğrenci e-postalarını veya ayrıcalıklı anahtarları kaynak dosyalara eklemeyin.
 
 Kayıt kısıtlaması `auth.users` tablosundaki `sks_registration_allowlist` tetikleyicisiyle uygulanır. Yeni hesap ve e-posta değişikliği yalnızca aktif izin listesindeki adresler için kabul edilir. Liste, Ekip ekranından yönetilir. Bu kontrol mevcut yönetici hesabını değiştirmez.
+
+## Planlama ve takip özellikleri
+
+- Takvim: teslim, çekim ve yayın tarihleri; görev araması ve öğrenci filtresiyle birlikte çalışır.
+- Şablonlar: yönetici yeni şablon oluşturabilir, düzenleyebilir, silebilir ve şablondan görev açabilir. Başlangıçta etkinlik duyurusu, video ve bülten şablonları vardır.
+- Kontrol listesi: öğrenciler kendi görevlerindeki adımları işaretleyebilir. Eksik adımlarla onaya gönderme/tamamlama veritabanında engellenir. Onay aşamasındaki listeyi yönetici düzenler.
+- İş yükü: açık sorumlu görevlerin tahmini saatleri ve destek görevleri gösterilir. Bu süreler ücret veya resmi çalışma saati kaydı değildir.
+- Uygulama içi bildirimler: atama, durum, teslim ve yorum değişiklikleri; yaklaşan/geciken teslim hatırlatmaları saatlik Cron işiyle oluşturulur. E-posta veya telefon bildirimi gönderilmez. Açık sayfa dakikada bir yenilenir.
+- İşlem geçmişi: sunucu tarafından yazılan görev ve yorum olayları; panoda son 200 kayıt görünür. Öğrenci geçmişi yalnızca erişebildiği görevlerle sınırlıdır.
+- Günlük yedek: Türkiye saatiyle 06.00'da alınan 30 günlük JSON kayıt kopyaları. Yönetici Rapor ve yedek ekranından indirebilir. Cron işleri uygulama kapalıyken de veritabanında çalışır; projenin aktif durumda olması gerekir.
+
+Yedekler aynı veritabanındaki özel tabloda tutulur; farklı sunucuda felaket kurtarma yedeği değildir. İndirilip ayrı güvenli bir yerde tutulması önerilir. Şifreler ve Drive/OneDrive dosyalarının kendisi kopyalanmaz. İlk yedek kurulum sırasında alınmıştır.
+
+`db/sks-schema.sql` ilk kurulum tabanıdır. Yeni özelliklerin ek şeması `supabase/migrations/` altında sürümlenir. Mevcut projede bu migration'lar uygulanmıştır; tekrar çalıştırmayın.
