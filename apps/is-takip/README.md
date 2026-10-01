@@ -38,3 +38,9 @@ Yedekler aynı veritabanındaki özel tabloda tutulur; farklı sunucuda felaket 
 Masaüstünde sol menü, mobilde alt menü ve Diğer menüsü kullanılır. Açılışta Bugün ekranı gelir; öğrenciler kendi bugünkü işleri, revizyonları ve yaklaşan teslimlerini görür. Görev kartları kalan süreyi, sorumlu baş harflerini, durum yazısını ve kontrol ilerlemesini gösterir. Görev detayları sağ panelde açılır.
 
 Masaüstünde kartlar pano sütunları arasında sürüklenebilir. Öğrenciler yalnızca devam eden çalışmaya veya onay aşamasına taşıyabilir; tamamlanma ve revizyon kararları yöneticiye aittir. Revizyon isteği açıklama gerektirir, eksik kontrol adımları onay/tamamlama geçişini engeller. Mobil ve klavye kullanımında görev panelindeki durum düğmeleri aynı işi yapar.
+
+## Profil ve oturum
+
+Sağ üstteki hesap menüsünden Profil ve hesap ayarları açılır. Görünen ad ve avatar rengi Supabase kullanıcı profil metadatasında saklanır; bunlar yalnızca görünümü etkiler. Yetkilendirme kullanıcı metadatasına dayanmaz; görevlerdeki resmi ekip adı ve izin listesi yönetici kontrolündedir.
+
+Giriş ekranındaki Şifremi unuttum bağlantısı şifre yenileme e-postası gönderir. Doğrulanan yenileme bağlantısı panoya döndüğünde yeni şifre formu açılır. Authentication URL Configuration ayarlarında pano adresinin izinli olması gerekir. Şifre değiştirme yalnızca kullanıcının kendi oturumunda yapılır. Profil ekranında bu cihazdan çıkış ve diğer oturumları kapatma seçenekleri vardır. Diğer oturumların yenileme erişimi sonlanır; mevcut erişim tokenları süreleri dolana kadar geçerli kalabilir.
