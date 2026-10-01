@@ -49,10 +49,10 @@ Görev silme ve geri alma yalnızca yöneticiye açıktır. Silme işlemi görev
 
 ## Ekip iletişimi
 
-Ekip sohbeti tüm aktif yetkililere açıktır. Görev konuşmalarını yönetici, sorumlu ve destek ekibi görebilir; silinen görevlerin konuşmaları erişime kapanır. Mesaj kaldırma ve paylaşılan ekleri temizleme yalnızca yöneticiye açıktır.
+Ortak ekip grubu tüm aktif yetkililere açıktır. Mesajlar ekranında kullanıcı listesi ve birebir konuşmalar bulunur. Birebir konuşmalara yalnızca iki katılımcı erişebilir; yönetici diğer iki kişinin konuşmalarını uygulamadan göremez. Henüz hesap oluşturmayan öğrenciler listede bekleyen olarak gösterilir. Görev konuşmalarını yönetici, sorumlu ve destek ekibi görebilir; silinen görevlerin konuşmaları erişime kapanır. Mesaj kaldırma ve paylaşılan ekleri temizleme yalnızca yöneticiye açıktır.
 
 Dosyalar `sks-chat` özel Storage alanına yüklenir ve oturum açmış kullanıcıların yetkileriyle indirilir. GitHub'da mesaj, belge veya görsel tutulmaz. Mesaj başına en fazla 5 dosya, dosya başına 20 MB; JPG/PNG/WEBP/GIF, PDF/TXT, Word/Excel/PowerPoint desteklenir. HTML/SVG ve çalıştırılabilir dosyalar kabul edilmez. Dosyalar değiştirilmez; yeni paylaşım yeni nesne oluşturur.
 
 Anlık mesaj yenileme Realtime ile çalışır; görünür sekmede 10 saniyelik yenileme bağlantı kesintileri için yedektir. Sohbet taslağı yenilemelerde korunur. Okunmamış mesaj sayısı menüde, görev konuşmaları da ekip sohbetindeki kısayollarda görünür. Öğrenci etiketleri mesaj üzerinde gösterilir. Harici e-posta veya tarayıcı push bildirimi gönderilmez.
 
-Günlük yedekler mesajları, okuma durumlarını ve dosya bilgilerini kapsar; Storage dosyalarının içeriği JSON yedeğine dahil değildir. Kaldırılan mesajların kayıtları yönetim amacıyla saklanır; ekleri Storage API ile temizlenir. Kullanıcının önceden indirdiği dosyalar geri alınamaz.
+Yöneticinin indirebildiği günlük yedekler ortak grup ve görev mesajlarını, ilgili okuma durumlarını ve dosya bilgilerini kapsar; birebir konuşmalar bu yedeklere dahil edilmez; Storage dosyalarının içeriği JSON yedeğine dahil değildir. Kaldırılan mesajların kayıtları yönetim amacıyla saklanır; ekleri Storage API ile temizlenir. Kullanıcının önceden indirdiği dosyalar geri alınamaz.
