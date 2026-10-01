@@ -15,6 +15,7 @@
 
 | Project | What it does | Open |
 |---|---|---|
+| **SKS Task Tracker** | Private task assignments, submissions, approvals and reports backed by Supabase Auth and Postgres RLS. | [Open Tracker →](https://pelinaybar.com/apps/is-takip/) |
 | **SKS Carousel Design Studio** | Creates multi-slide club and event designs for Instagram Post, Story, and Web formats. | [Launch Studio →](https://pelinaybar.com/apps/sks-carousel/) |
 | **SKS Event Studio V2** | Converts Excel event data into mail bulletins, social posts, stories, and weekly summaries. | [Launch V2 →](https://pelinaybar.com/apps/event-creator-v2/) |
 | **Event Creator V1** | The original browser-based SKS event poster creator. | [Launch V1 →](https://pelinaybar.com/apps/event-creator/) |
@@ -69,9 +70,10 @@ A multi-format production tool for preparing weekly student club communications 
 
 ## Privacy by Design
 
-- Uploaded images and Excel files are processed inside the browser.
-- Project drafts are stored locally on the current device.
-- User content is not intentionally transmitted to an application server.
+- The design tools process uploaded images and Excel files inside the browser.
+- Design and locker drafts are stored locally on the current device.
+- The task tracker stores team, task and comment records in Supabase. Confirmed allowlisted accounts access records through database row policies; students access only assigned/support tasks.
+- Task records and private account mappings are not committed to this public repository.
 - Clearing browser storage also removes locally saved drafts.
 - The website's visual access screen is a user-interface layer, not server-side authentication.
 
@@ -85,6 +87,7 @@ A multi-format production tool for preparing weekly student club communications 
 │   ├── css/
 │   └── js/
 └── apps/
+    ├── is-takip/
     ├── sks-carousel/
     ├── event-creator/
     ├── event-creator-v2/

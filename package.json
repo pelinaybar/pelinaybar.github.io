@@ -1,0 +1,1 @@
+{"name":"pelinaybar-workspace","private":true,"type":"module","scripts":{"build:tracker":"esbuild apps/is-takip/src/main.js --bundle --minify --format=esm --target=es2022 --outfile=apps/is-takip/app.js","check:tracker":"node --check apps/is-takip/src/main.js"},"dependencies":{"@supabase/supabase-js":"2.117.2"},"devDependencies":{"esbuild":"0.28.2","supabase":"2.119.0"}}
