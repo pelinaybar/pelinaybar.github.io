@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "node scripts/private-site-build.mjs",
+  "outputDirectory": ".portal-empty",
+  "functions": {"api/gateway.js": {"includeFiles": ".private-site/**", "maxDuration": 30}},
+  "rewrites": [{"source": "/:path*", "destination": "/api/gateway?__private_path=:path*"}]
+}
