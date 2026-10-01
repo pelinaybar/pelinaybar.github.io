@@ -32,3 +32,9 @@ Kayıt kısıtlaması `auth.users` tablosundaki `sks_registration_allowlist` tet
 Yedekler aynı veritabanındaki özel tabloda tutulur; farklı sunucuda felaket kurtarma yedeği değildir. İndirilip ayrı güvenli bir yerde tutulması önerilir. Şifreler ve Drive/OneDrive dosyalarının kendisi kopyalanmaz. İlk yedek kurulum sırasında alınmıştır.
 
 `db/sks-schema.sql` ilk kurulum tabanıdır. Yeni özelliklerin ek şeması `supabase/migrations/` altında sürümlenir. Mevcut projede bu migration'lar uygulanmıştır; tekrar çalıştırmayın.
+
+## Arayüz
+
+Masaüstünde sol menü, mobilde alt menü ve Diğer menüsü kullanılır. Açılışta Bugün ekranı gelir; öğrenciler kendi bugünkü işleri, revizyonları ve yaklaşan teslimlerini görür. Görev kartları kalan süreyi, sorumlu baş harflerini, durum yazısını ve kontrol ilerlemesini gösterir. Görev detayları sağ panelde açılır.
+
+Masaüstünde kartlar pano sütunları arasında sürüklenebilir. Öğrenciler yalnızca devam eden çalışmaya veya onay aşamasına taşıyabilir; tamamlanma ve revizyon kararları yöneticiye aittir. Revizyon isteği açıklama gerektirir, eksik kontrol adımları onay/tamamlama geçişini engeller. Mobil ve klavye kullanımında görev panelindeki durum düğmeleri aynı işi yapar.
