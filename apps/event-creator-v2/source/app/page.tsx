@@ -589,12 +589,15 @@ export default function Home() {
   useEffect(() => {
     const update = () => {
       if (!previewWrap.current) return;
-      const b = previewWrap.current.getBoundingClientRect();
-      setScale(Math.min((b.width - 64) / f.w, (b.height - 64) / f.h, 0.72));
+      const stage = previewWrap.current.querySelector(".canvas-stage");
+      const b = (stage || previewWrap.current).getBoundingClientRect();
+      const height = canvas.current?.offsetHeight || f.h;
+      setScale(Math.min((b.width - 48) / f.w, (b.height - 48) / height, 0.72));
     };
     update();
     const o = new ResizeObserver(update);
     if (previewWrap.current) o.observe(previewWrap.current);
+    if (canvas.current) o.observe(canvas.current);
     return () => o.disconnect();
   }, [f.w, f.h]);
   useEffect(() => {
@@ -805,13 +808,15 @@ export default function Home() {
       ),
     );
     const width = Number(exportNode.dataset.exportWidth);
-    const height = Number(exportNode.dataset.exportHeight);
+    const height = exportNode.classList.contains("mail")
+      ? Math.ceil(Math.max(exportNode.offsetHeight, exportNode.scrollHeight))
+      : Number(exportNode.dataset.exportHeight);
     const data = await toPng(exportNode, {
       cacheBust: true,
       pixelRatio: 1,
       width,
       height,
-      style: { transform: "none" },
+      style: { transform: "none", height: `${height}px` },
     });
     const a = document.createElement("a");
     a.download = exportName;
@@ -829,17 +834,21 @@ export default function Home() {
           document.querySelectorAll<HTMLElement>("[data-export-name]"),
         );
       for (let i = 0; i < nodes.length; i++) {
+        await document.fonts.ready;
+        await Promise.all(Array.from(nodes[i].querySelectorAll("img")).map((image) => image.decode().catch(() => undefined)));
         const node = nodes[i],
           name = node.dataset.exportName || `tasarim-${i + 1}.png`,
           w = Number(node.dataset.exportWidth),
-          h = Number(node.dataset.exportHeight);
+          h = node.classList.contains("mail")
+            ? Math.ceil(Math.max(node.offsetHeight, node.scrollHeight))
+            : Number(node.dataset.exportHeight);
         setNotice(`${i + 1} / ${nodes.length} tasarım hazırlanıyor…`);
         const data = await toPng(node, {
           cacheBust: true,
           pixelRatio: 1,
           width: w,
           height: h,
-          style: { transform: "none" },
+          style: { transform: "none", height: `${h}px` },
         });
         zip.file(name, data.split(",")[1], { base64: true });
       }
@@ -1087,7 +1096,8 @@ export default function Home() {
               ref={canvas}
               style={{
                 width: f.w,
-                height: f.h,
+                height: format === "mail" ? "auto" : f.h,
+                minHeight: format === "mail" ? mailHeight : undefined,
                 transform: `scale(${scale})`,
                 backgroundImage: background
                   ? `linear-gradient(180deg,rgba(5,40,29,.82),rgba(5,26,21,.94)),url(${background})`
@@ -1681,7 +1691,7 @@ function BatchExports({
         data-export-name="01-mail-bulteni.png"
         data-export-width="1200"
         data-export-height={mailHeight}
-        style={{ width: 1200, height: mailHeight, backgroundImage: bg }}
+        style={{ width: 1200, height: "auto", minHeight: mailHeight, backgroundImage: bg }}
       >
         <DesignHeader range={range} count={events.length} />
         <EventDesign

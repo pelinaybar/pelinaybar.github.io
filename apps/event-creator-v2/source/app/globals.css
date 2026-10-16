@@ -142,3 +142,7 @@ button.upload-row{width:100%;color:var(--ink);text-align:left;background:#fff}
 .mail .design-card .meta .campus{justify-self:auto!important;padding-left:12px!important;position:relative!important}
 .mail .design-card .meta .campus:before{content:"•";position:absolute;left:0;color:#A7B5B1}
 .mail .design-card .meta svg{flex-shrink:0}
+
+/* Mail grows with its content; keep the complete institutional footer visible. */
+.design-canvas.mail>.design-header,.design-canvas.mail>.design-body,.design-canvas.mail>.design-footer{flex-shrink:0}
+.design-canvas.mail>.design-footer{height:auto!important;min-height:110px!important;padding-top:16px!important;padding-bottom:16px!important;overflow:visible!important}
