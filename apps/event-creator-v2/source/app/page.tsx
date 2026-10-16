@@ -1318,22 +1318,24 @@ function QuickEditor({
           </label>
           <label className="wide">
             Yerleşke
-            <select
+            <input
+              type="text"
+              list="campus-options"
               value={event.campus}
               onChange={(e) => onUpdate("campus", e.target.value)}
-            >
-              <option>Merkez Yerleşkesi</option>
-              <option>Güney Yerleşkesi</option>
-              <option>Çarşı Yerleşkesi</option>
-              <option>NP Yerleşkesi</option>
-              <option>NP Sağlık Yerleşkesi</option>
-              <option>Sağlık Yerleşkesi</option>
-              <option>Kurum Dışı</option>
-              <option>Online</option>
-              {event.campus && !["Merkez Yerleşkesi", "Güney Yerleşkesi", "Çarşı Yerleşkesi", "NP Yerleşkesi", "NP Sağlık Yerleşkesi", "Sağlık Yerleşkesi", "Kurum Dışı", "Online"].includes(event.campus) && (
-                <option>{event.campus}</option>
-              )}
-            </select>
+              placeholder="Yerleşke veya platform adı yazın"
+            />
+            <datalist id="campus-options">
+              <option value="Merkez Yerleşkesi" />
+              <option value="Güney Yerleşkesi" />
+              <option value="Çarşı Yerleşkesi" />
+              <option value="NP Sağlık Yerleşkesi" />
+              <option value="Diğer" />
+              <option value="Kurum Dışı" />
+              <option value="Çevrimiçi" />
+              <option value="Zoom" />
+              <option value="Microsoft Teams" />
+            </datalist>
           </label>
           <label className="logo-change wide">
             <span>

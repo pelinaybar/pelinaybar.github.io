@@ -2,4 +2,4 @@
 2:I[7121,[],""]
 3:I[4581,[],""]
 :HL["/apps/event-creator-v2/_next/static/css/1b588f6d71354126.css","style"]
-0:{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/apps/event-creator-v2/_next/static/css/1b588f6d71354126.css","precedence":"next"}]],["$","html",null,{"lang":"tr","children":["$","body",null,{"children":["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"h2QCEdyOzBdtQp_PBBMsN"}
+0:{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/apps/event-creator-v2/_next/static/css/1b588f6d71354126.css","precedence":"next"}]],["$","html",null,{"lang":"tr","children":["$","body",null,{"children":["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"FjJ6wsENrYRHw1B_9l4u8"}
