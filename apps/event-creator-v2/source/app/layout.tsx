@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false, noarchive: true, nosnippet: true, noimageindex: true },
   title: "2026-2027 Akademik Yılı SKS Etkinlik Stüdyosu",
   description:
     "SKS etkinliklerini Excel’den mail, Instagram post, story ve haftalık özet tasarımlarına dönüştürün.",

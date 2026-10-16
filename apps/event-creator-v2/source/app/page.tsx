@@ -95,6 +95,7 @@ const CAMPUS: Record<string, { key: string; color: string; soft: string }> = {
   çarşı: { key: "Çarşı", color: "#B5A52B", soft: "#F7F4DD" },
   carsi: { key: "Çarşı", color: "#B5A52B", soft: "#F7F4DD" },
   np: { key: "NP", color: "#24AAA7", soft: "#E5F7F6" },
+  sağlık: { key: "NP", color: "#24AAA7", soft: "#E5F7F6" },
 };
 const SUMMARY_COLORS = [
   { color: "#24AAA7", soft: "#E5F7F6" },
@@ -394,7 +395,13 @@ const getHoliday = (iso: string) => {
 const getCampus = (name: string) =>
   Object.entries(CAMPUS).find(([k]) =>
     normalize(name).includes(normalize(k)),
-  )?.[1] ?? { key: "Diğer", color: "#B41655", soft: "#F9E8EF" };
+  )?.[1] ?? { key: name.trim() || "Yerleşke belirtilmedi", color: "#B41655", soft: "#F9E8EF" };
+const campusLabel = (name: string) => {
+  const label = name.trim();
+  return ["saglikyerleskesi", "npyerleskesi", "npsaglikyerleskesi", "np"].includes(normalize(label))
+    ? "NP Sağlık Yerleşkesi"
+    : label || "Yerleşke belirtilmedi";
+};
 // “ve” kulüp adının doğal bir parçası olabilir. Ortak kulüp yalnızca “veya”
 // ya da açık ayraçlarla (&, +, virgül, noktalı virgül, /) belirtilir.
 const splitClubs = (club: string) =>
@@ -1308,6 +1315,13 @@ function QuickEditor({
               <option>Güney Yerleşkesi</option>
               <option>Çarşı Yerleşkesi</option>
               <option>NP Yerleşkesi</option>
+              <option>NP Sağlık Yerleşkesi</option>
+              <option>Sağlık Yerleşkesi</option>
+              <option>Kurum Dışı</option>
+              <option>Online</option>
+              {event.campus && !["Merkez Yerleşkesi", "Güney Yerleşkesi", "Çarşı Yerleşkesi", "NP Yerleşkesi", "NP Sağlık Yerleşkesi", "Sağlık Yerleşkesi", "Kurum Dışı", "Online"].includes(event.campus) && (
+                <option>{event.campus}</option>
+              )}
             </select>
           </label>
           <label className="logo-change wide">
@@ -1445,7 +1459,7 @@ function EventCard({
         <span>
           <MapPin /> {event.location || "Mekân bilgisi eklenecek"}
         </span>
-        <span className="campus">{c.key} Yerleşkesi</span>
+        <span className="campus">{campusLabel(event.campus)}</span>
       </div>
     </article>
   );
