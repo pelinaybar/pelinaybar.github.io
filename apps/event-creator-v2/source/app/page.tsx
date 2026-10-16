@@ -666,7 +666,8 @@ export default function Home() {
     if (!file) return;
     const wb = XLSX.read(await file.arrayBuffer(), {
         type: "array",
-        cellDates: true,
+        // Keep Excel calendar dates numeric so browser time zones cannot shift them.
+        cellDates: false,
       }),
       sheet = wb.Sheets["Tüm Etkinlikler"] ?? wb.Sheets[wb.SheetNames[0]],
       rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
@@ -679,8 +680,8 @@ export default function Home() {
         title: String(r["Etkinlik Adı"] || "Etkinlik"),
         date: isoDate(r["Tarih"]),
         time:
-          r["Saat"] instanceof Date
-            ? `${pad((r["Saat"] as Date).getHours())}.${pad((r["Saat"] as Date).getMinutes())}`
+          typeof r["Saat"] === "number"
+            ? XLSX.SSF.format("hh:mm", r["Saat"] as number).replace(":", ".")
             : String(r["Saat"] || ""),
         speaker: String(r["Konuşmacılar"] || ""),
         campus: String(r["Yerleşkesi"] || ""),
