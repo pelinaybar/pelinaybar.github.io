@@ -1,3 +1,2 @@
-:HL["/apps/event-creator-v2/_next/static/chunks/145qf.45n-260.css","style"]
-:HL["/assets/css/privacy-gate.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"-GTswEtYc04kFYr9zudLA"}
+:HL["/apps/event-creator-v2/_next/static/css/89b2842c8c14e734.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"_not-found","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"zsbzSf9I0rppG57cKCGtP"}

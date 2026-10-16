@@ -397,10 +397,10 @@ const getCampus = (name: string) =>
     normalize(name).includes(normalize(k)),
   )?.[1] ?? { key: name.trim() || "Yerleşke belirtilmedi", color: "#B41655", soft: "#F9E8EF" };
 const campusLabel = (name: string) => {
-  const campus = getCampus(name);
-  return Object.values(CAMPUS).some((item) => item === campus)
-    ? `${campus.key} Yerleşkesi`
-    : campus.key;
+  const label = name.trim();
+  return ["saglikyerleskesi", "npyerleskesi", "npsaglikyerleskesi", "np"].includes(normalize(label))
+    ? "NP Sağlık Yerleşkesi"
+    : label || "Yerleşke belirtilmedi";
 };
 // “ve” kulüp adının doğal bir parçası olabilir. Ortak kulüp yalnızca “veya”
 // ya da açık ayraçlarla (&, +, virgül, noktalı virgül, /) belirtilir.
@@ -1315,10 +1315,11 @@ function QuickEditor({
               <option>Güney Yerleşkesi</option>
               <option>Çarşı Yerleşkesi</option>
               <option>NP Yerleşkesi</option>
+              <option>NP Sağlık Yerleşkesi</option>
               <option>Sağlık Yerleşkesi</option>
               <option>Kurum Dışı</option>
               <option>Online</option>
-              {event.campus && !["Merkez Yerleşkesi", "Güney Yerleşkesi", "Çarşı Yerleşkesi", "NP Yerleşkesi", "Sağlık Yerleşkesi", "Kurum Dışı", "Online"].includes(event.campus) && (
+              {event.campus && !["Merkez Yerleşkesi", "Güney Yerleşkesi", "Çarşı Yerleşkesi", "NP Yerleşkesi", "NP Sağlık Yerleşkesi", "Sağlık Yerleşkesi", "Kurum Dışı", "Online"].includes(event.campus) && (
                 <option>{event.campus}</option>
               )}
             </select>
