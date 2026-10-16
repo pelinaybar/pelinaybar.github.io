@@ -135,3 +135,10 @@ button.upload-row{width:100%;color:var(--ink);text-align:left;background:#fff}
 .club-logo-item{border:1px solid var(--line);border-radius:13px;padding:10px;display:flex;align-items:center;gap:11px;cursor:pointer;background:#fbfdfc}.club-logo-item:hover{border-color:#8fcfcb;background:#f1faf9}.club-logo-item .club-logo{width:46px;height:46px;flex:none}.club-logo-item>span{min-width:0;display:flex;flex-direction:column;gap:3px}.club-logo-item b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.club-logo-item small{font-size:8px;color:#7a8d88}.club-logo-item input{display:none}
 .history-list{padding:14px 18px 20px;display:flex;flex-direction:column;gap:8px;overflow:auto}.history-list>button{border:1px solid var(--line);background:#fbfdfc;border-radius:12px;padding:12px;display:flex;align-items:center;text-align:left;cursor:pointer}.history-list>button:hover{border-color:#8fcfcb;background:#f1faf9}.history-list>button span{display:flex;flex:1;flex-direction:column;gap:3px}.history-list b{font-size:11px}.history-list small{font-size:9px;color:#758681}.history-list em{font-style:normal;font-size:9px;font-weight:850;color:var(--sks-teal-dark)}.history-list p{text-align:center;color:#758681;font-size:11px;padding:24px}
 @media(max-width:620px){.club-logo-list{grid-template-columns:1fr}.manager-tools{flex-direction:column}}
+
+/* Mail kartlarında yerleşke konumu hemen takip eder; uzun metinler sarılır. */
+.mail .design-card .meta,.batch-exports .mail .design-card .meta{display:flex!important;justify-content:flex-start!important;align-items:baseline!important;flex-wrap:wrap!important;gap:5px 10px!important}
+.mail .design-card .meta span{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;flex:0 1 auto!important}
+.mail .design-card .meta .campus{justify-self:auto!important;padding-left:12px!important;position:relative!important}
+.mail .design-card .meta .campus:before{content:"•";position:absolute;left:0;color:#A7B5B1}
+.mail .design-card .meta svg{flex-shrink:0}
