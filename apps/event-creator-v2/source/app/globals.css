@@ -145,5 +145,5 @@ button.upload-row{width:100%;color:var(--ink);text-align:left;background:#fff}
 .design-card .meta .campus:before{content:" · ";color:#82948E;white-space:pre}
 
 /* Use the same embedded face and unrestricted club name in preview and PNG. */
-.design-canvas{font-family:"SKS Inter",Arial,sans-serif;font-synthesis:none}
+.design-canvas,.design-canvas *{font-family:"SKS Inter",Arial,sans-serif!important;font-synthesis:none}
 .design-card .card-head>span{display:block;min-width:0;flex:1;white-space:normal;overflow:visible;text-overflow:clip;-webkit-line-clamp:unset;-webkit-box-orient:initial;overflow-wrap:break-word}
