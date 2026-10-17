@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
+import StudioTools, { ExcelImport } from "./studio-tools";
 import { toPng } from "html-to-image";
 import JSZip from "jszip";
 import {
@@ -462,7 +463,7 @@ function ClubLogo({
 
 export default function Home() {
   const [format, setFormat] = useState<Format>("post"),
-    [events, setEvents] = useState<EventItem[]>(samples),
+    [events, rawSetEvents] = useState<EventItem[]>(samples),
     [selected, setSelected] = useState("1"),
     [logos, setLogos] = useState<Record<string, string>>({}),
     [background, setBackground] = useState(`${PUBLIC_BASE}/arka-plan.png`),
@@ -474,6 +475,33 @@ export default function Home() {
     [historyOpen, setHistoryOpen] = useState(false),
     [history, setHistory] = useState<DraftSnapshot[]>([]),
     [exporting, setExporting] = useState(false);
+  const [importBook, setImportBook] = useState(null);
+  const [rememberedPlaces, setRememberedPlaces] = useState([]);
+  useEffect(()=>{try { setRememberedPlaces(JSON.parse(localStorage.getItem("sks-place-suggestions-v1")||"[]")); }catch{}},[]);
+  useEffect(()=>{if(!hydrated.current)return;setRememberedPlaces(previous=>{const next=Array.from(new Map([...previous,...events].map(e=>[e.location+"|"+e.campus,{location:e.location,campus:e.campus}])).values()).slice(-300);try{localStorage.setItem("sks-place-suggestions-v1",JSON.stringify(next));}catch{}return next;});},[events]);
+  const undoRef = useRef<EventItem[][]>([]), redoRef = useRef<EventItem[][]>([]), eventsRef = useRef(events);
+  const [undoVersion, setUndoVersion] = useState(0);
+  eventsRef.current = events;
+  function setEvents(value) {
+    const previous = eventsRef.current;
+    const next = typeof value === "function" ? value(previous) : value;
+    if (next === previous) return;
+    undoRef.current = [...undoRef.current, previous].slice(-60);
+    redoRef.current = [];
+    eventsRef.current = next;
+    rawSetEvents(next);
+    setUndoVersion(v => v + 1);
+  }
+  function undoEvents() {
+    const previous = undoRef.current.pop(); if (!previous) return;
+    redoRef.current.push(eventsRef.current); eventsRef.current = previous;
+    rawSetEvents(previous); setUndoVersion(v=>v+1); setNotice("Son değişiklik geri alındı");
+  }
+  function redoEvents() {
+    const next = redoRef.current.pop(); if (!next) return;
+    undoRef.current.push(eventsRef.current); eventsRef.current=next;
+    rawSetEvents(next);setUndoVersion(v=>v+1);setNotice("Değişiklik yeniden uygulandı");
+  }
   const previewWrap = useRef<HTMLDivElement>(null),
     canvas = useRef<HTMLDivElement>(null),
     dragged = useRef<string | null>(null),
@@ -667,36 +695,11 @@ export default function Home() {
     });
   async function importExcel(file?: File) {
     if (!file) return;
-    const wb = XLSX.read(await file.arrayBuffer(), {
-        type: "array",
-        // Keep Excel calendar dates numeric so browser time zones cannot shift them.
-        cellDates: false,
-      }),
-      sheet = wb.Sheets["Tüm Etkinlikler"] ?? wb.Sheets[wb.SheetNames[0]],
-      rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-        defval: "",
-      });
-    const mapped = rows
-      .map((r) => ({
-        id: crypto.randomUUID(),
-        club: String(r["Kulüp Adı"] || "Kulüp belirtilmedi"),
-        title: String(r["Etkinlik Adı"] || "Etkinlik"),
-        date: isoDate(r["Tarih"]),
-        time:
-          typeof r["Saat"] === "number"
-            ? XLSX.SSF.format("hh:mm", r["Saat"] as number).replace(":", ".")
-            : String(r["Saat"] || ""),
-        speaker: String(r["Konuşmacılar"] || ""),
-        campus: String(r["Yerleşkesi"] || ""),
-        location: String(r["Etkinlik Yeri"] || r["Mekan"] || ""),
-      }))
-      .filter((e) => e.date || e.title);
-    if (mapped.length) {
-      addHistory("Yeni Excel yüklenmeden önce", events);
-      setEvents(mapped);
-      setSelected(mapped[0].id);
-      setNotice(`${mapped.length} etkinlik Excel’den aktarıldı`);
-    }
+    try {
+      const wb = XLSX.read(await file.arrayBuffer(), {type:"array", cellDates:false});
+      if (!wb.SheetNames.length) throw new Error("Excel'de sekme bulunamadı");
+      setImportBook(wb);
+    } catch { setNotice("Excel okunamadı; geçerli bir XLSX dosyası seçin"); }
   }
   async function importLogos(files: FileList | null) {
     if (!files) return;
@@ -824,7 +827,7 @@ export default function Home() {
     a.click();
     setNotice("Yüksek çözünürlüklü PNG indirildi");
   }
-  async function downloadAll() {
+  async function downloadAll(selectedNames?: string[]) {
     if (exporting) return;
     setExporting(true);
     setNotice("Tüm tasarımlar hazırlanıyor…");
@@ -832,7 +835,7 @@ export default function Home() {
       const zip = new JSZip(),
         nodes = Array.from(
           document.querySelectorAll<HTMLElement>("[data-export-name]"),
-        );
+        ).filter(node => !Array.isArray(selectedNames) || selectedNames.includes(node.dataset.exportName || ""));
       for (let i = 0; i < nodes.length; i++) {
         await document.fonts.ready;
         await Promise.all(Array.from(nodes[i].querySelectorAll("img")).map((image) => image.decode().catch(() => undefined)));
@@ -860,7 +863,7 @@ export default function Home() {
         url = URL.createObjectURL(blob),
         a = document.createElement("a");
       a.href = url;
-      a.download = "sks-etkinlik-tum-tasarimlar.zip";
+      a.download = `sks-etkinlik-${events.map(e=>e.date).filter(Boolean).sort()[0] || "tasarimlar"}.zip`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setNotice(`${nodes.length} tasarım ZIP olarak indirildi`);
@@ -876,11 +879,13 @@ export default function Home() {
   ).sort((a, b) => a.localeCompare(b, "tr-TR"));
   return (
     <main className="studio-shell">
+      {importBook && <ExcelImport book={importBook} onClose={()=>setImportBook(null)} onImport={items=>{addHistory("Excel aktarımı öncesi",events);setEvents(items);setSelected(items[0]?.id||"");setImportBook(null);setNotice(`${items.length} etkinlik kontrol edilerek aktarıldı`);}}/>}
       {quickOpen && selectedEvent && (
         <QuickEditor
           event={selectedEvent}
           onClose={() => setQuickOpen(false)}
           onUpdate={(key, value) => update(selected, key, value)}
+          suggestions={[...rememberedPlaces,...events]}
           onDelete={() => {
             setEvents((v) => v.filter((e) => e.id !== selected));
             setQuickOpen(false);
@@ -922,7 +927,7 @@ export default function Home() {
           <button
             className="download secondary"
             disabled={exporting}
-            onClick={downloadAll}
+            onClick={() => downloadAll()}
           >
             <Archive size={18} /> {exporting ? "Hazırlanıyor…" : "Tümünü İndir"}
           </button>
@@ -931,6 +936,7 @@ export default function Home() {
           </button>
         </div>
       </header>
+      <StudioTools events={events} setEvents={setEvents} logos={logos} setLogos={setLogos} background={background} setBackground={setBackground} onNotice={setNotice} onUndo={undoEvents} onRedo={redoEvents} canUndo={undoRef.current.length>0} canRedo={redoRef.current.length>0} onExport={downloadAll}/>
       <div className="workspace">
         <aside className="controls">
           <section className="control-section">
@@ -1258,11 +1264,13 @@ function QuickEditor({
   onClose,
   onUpdate,
   onDelete,
+  suggestions,
 }: {
   event: EventItem;
   onClose: () => void;
   onUpdate: (key: keyof EventItem, value: string) => void;
   onDelete: () => void;
+  suggestions: EventItem[];
 }) {
   return (
     <div
@@ -1311,11 +1319,12 @@ function QuickEditor({
           </label>
           <label className="wide">
             Mekân
-            <input
+            <input list="venue-options"
               value={event.location}
               onChange={(e) => onUpdate("location", e.target.value)}
             />
           </label>
+          <datalist id="venue-options">{Array.from(new Set(suggestions.map(e=>e.location).filter(Boolean))).map(v=><option key={v} value={v}/>)}</datalist>
           <label className="wide">
             Yerleşke
             <input
@@ -1326,6 +1335,7 @@ function QuickEditor({
               placeholder="Yerleşke veya platform adı yazın"
             />
             <datalist id="campus-options">
+              {Array.from(new Set(suggestions.map(e=>e.campus).filter(Boolean))).map(v=><option key={v} value={v}/>)}
               <option value="Merkez Yerleşkesi" />
               <option value="Güney Yerleşkesi" />
               <option value="Çarşı Yerleşkesi" />
