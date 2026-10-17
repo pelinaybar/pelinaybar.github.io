@@ -1547,7 +1547,7 @@ function BatchExports({
       }, {}),
     ).sort(([a], [b]) => a.localeCompare(b)) as [string, EventItem[]][];
   return (
-    <div className="batch-exports" aria-hidden="true">
+    <div className="batch-exports" aria-hidden="true" inert>
       <div
         className="design-canvas mail"
         data-export-name="01-mail-bulteni.png"
