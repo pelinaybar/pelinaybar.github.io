@@ -19,3 +19,4 @@ assert.throws(()=>m.validateProject({events:[{...ok,id:'1',date:'2026-02-31'}]})
 assert.equal(m.validateProject({events:Array.from({length:2000},(_,i)=>({...ok,id:String(i)}))}).project.events.length,2000);assert.throws(()=>m.validateProject({events:Array(2001).fill(ok)}));
 const round=c.readHistory(c.packHistory([checked.project]));assert.equal(round[0].settings.shareDraft.texts.caption,'Korunan taslak');assert.equal(round[0].events.length,2);
 console.log('27 additional normalization, scoped edit, overnight, schema, backup and 2000-row assertions passed');
+assert.equal(m.projectSignature({events:rows,logos:{b:'2',a:'1'},settings:{logoShape:'circle'},savedAt:'old'}),m.projectSignature({settings:{shareDraft:{texts:{},key:''},logoShape:'circle'},logos:{a:'1',b:'2'},events:rows,savedAt:'new',writer:'other'}));assert.notEqual(m.projectSignature({events:rows}),m.projectSignature({events:replaced}));console.log('2 cross-tab content comparison assertions passed');

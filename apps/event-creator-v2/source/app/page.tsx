@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import {validateProject,duplicateKey,campusText,validDate} from "./studio-model";
+import {validateProject,duplicateKey,campusText,validDate,projectSignature} from "./studio-model";
 import StudioTools, { ExcelImport, rowIssues } from "./studio-tools";
 import {resolveLogo,logoStatus,prepareImage,packPages,inspectNodes,ZoomView,ClubPicker,ExportReview,clubKey,packHistory,readHistory} from "./studio-core";
 import { toPng } from "html-to-image";
@@ -481,11 +481,11 @@ export default function Home() {
   const autoStarted=useRef(false),exportLock=useRef(false);
   const writerId=useRef(""),conflictRef=useRef(false),lastUndo=useRef({at:0,field:""}),cancelExport=useRef(false);
   const [saveStatus,setSaveStatus]=useState("Çalışma açılıyor"),[conflict,setConflict]=useState(null);
-  function persistProject(p){if(!hydrated.current||conflictRef.current)return;try{localStorage.setItem(DRAFT_KEY,JSON.stringify({...p,savedAt:new Date().toISOString(),writer:writerId.current}));setSaveStatus("Kaydedildi");}catch{setSaveStatus("Kaydedilemedi · Proje yedeği indirin");setNotice("Depolama dolu. Proje yedeğini indirin; Proje yedeği ekranından otomatik geçmişi temizleyebilirsiniz.");}}
+  function persistProject(p){if(!hydrated.current||conflictRef.current)return;try{let existing;try{existing=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");}catch{}if(existing&&projectSignature(existing)===projectSignature(p)){setSaveStatus("Kaydedildi");return;}localStorage.setItem(DRAFT_KEY,JSON.stringify({...p,savedAt:new Date().toISOString(),writer:writerId.current}));setSaveStatus("Kaydedildi");}catch{setSaveStatus("Kaydedilemedi · Proje yedeği indirin");setNotice("Depolama dolu. Proje yedeğini indirin; Proje yedeği ekranından otomatik geçmişi temizleyebilirsiniz.");}}
   const [undoVersion,setUndoVersion]=useState(0);
   projectRef.current={events,logos,background,settings};
   function applyProject(p){projectRef.current=p;rawSetEvents(p.events);rawSetLogos(p.logos||{});rawSetBackground(p.background??"");rawSetSettings(p.settings||{logoShape:"circle"});setSelected(current=>p.events.some(e=>e.id===current)?current:(p.events[0]?.id||""));}
-  function commitProject(patch){if(conflictRef.current||exportLock.current)return;const prev=projectRef.current;if(Object.entries(patch).every(([k,v])=>prev[k]===v))return;const next={...prev,...patch};const focused=document.activeElement,field=focused?.matches('input,textarea')?(focused.getAttribute('aria-label')||focused.closest('label')?.textContent||focused.tagName):"";const now=Date.now();if(!field||lastUndo.current.field!==field||now-lastUndo.current.at>1200)undoRef.current=[...undoRef.current,prev].slice(-40);lastUndo.current={at:now,field};redoRef.current=[];applyProject(next);persistProject(next);setUndoVersion(v=>v+1);}
+  function commitProject(patch){if(conflictRef.current||exportLock.current)return;const prev=projectRef.current;if(Object.entries(patch).every(([k,v])=>prev[k]===v))return;const next={...prev,...patch};const focused=document.activeElement,field=focused?.matches('input,textarea')?(selected+":"+(focused.getAttribute('aria-label')||focused.closest('label')?.textContent||focused.tagName)):"";const now=Date.now();if(!field||lastUndo.current.field!==field||now-lastUndo.current.at>1200)undoRef.current=[...undoRef.current,prev].slice(-40);lastUndo.current={at:now,field};redoRef.current=[];applyProject(next);persistProject(next);setUndoVersion(v=>v+1);}
   function setEvents(value){commitProject({events:typeof value==="function"?value(projectRef.current.events):value});}
   function setLogos(value){commitProject({logos:typeof value==="function"?value(projectRef.current.logos):value});}
   function setBackground(value){commitProject({background:typeof value==="function"?value(projectRef.current.background):value});}
@@ -578,10 +578,7 @@ export default function Home() {
     const timer = window.setTimeout(() => {
       if(conflictRef.current)return;
       try {
-        localStorage.setItem(
-          DRAFT_KEY,
-          JSON.stringify({ events, logos, background, settings, savedAt: new Date(),writer:writerId.current }),
-        );
+        persistProject(projectRef.current);
         const previous = readHistory(JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"));
         const signature = JSON.stringify({events,logos,background,settings});
         if (JSON.stringify(previous[0]&&{events:previous[0].events,logos:previous[0].logos,background:previous[0].background,settings:previous[0].settings}) !== signature) {
@@ -601,7 +598,7 @@ export default function Home() {
     }, 900);
     return () => window.clearTimeout(timer);
   }, [events, logos, background, settings]);
-  useEffect(()=>{const flush=()=>persistProject(projectRef.current);const storage=e=>{if(e.key!==DRAFT_KEY||!e.newValue)return;try{const raw=JSON.parse(e.newValue);if(raw.writer===writerId.current)return;const {project}=validateProject(raw);conflictRef.current=true;setConflict(project);setSaveStatus("Başka sekmede değişiklik var");}catch{setNotice("Diğer sekmedeki kayıt geçersiz; bu çalışma korundu.");}};window.addEventListener('pagehide',flush);window.addEventListener('storage',storage);return()=>{window.removeEventListener('pagehide',flush);window.removeEventListener('storage',storage);};},[]);
+  useEffect(()=>{const flush=()=>persistProject(projectRef.current);const storage=e=>{if(e.key!==DRAFT_KEY||!e.newValue)return;try{const raw=JSON.parse(e.newValue);if(raw.writer===writerId.current)return;const {project}=validateProject(raw);if(projectSignature(project)===projectSignature(projectRef.current))return;conflictRef.current=true;setConflict(project);setSaveStatus("Başka sekmede değişiklik var");}catch{setNotice("Diğer sekmedeki kayıt geçersiz; bu çalışma korundu.");}};window.addEventListener('pagehide',flush);window.addEventListener('storage',storage);return()=>{window.removeEventListener('pagehide',flush);window.removeEventListener('storage',storage);};},[]);
   useEffect(()=>{try{const p=JSON.parse(localStorage.getItem('sks-view-v1')||'null');if(p){setZoomMode(['fit','width','manual'].includes(p.mode)?p.mode:'fit');setManualZoom(Math.max(.1,Math.min(2,Number(p.zoom)||1)));}}catch{}},[]);
   useEffect(()=>{try{localStorage.setItem('sks-view-v1',JSON.stringify({mode:zoomMode,zoom:manualZoom}));}catch{}},[zoomMode,manualZoom]);
   useEffect(()=>{let dialog=null,previous=null;const focusable=()=>dialog?[...dialog.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]')].filter(e=>!e.disabled&&e.getClientRects().length):[];const observer=new MutationObserver(()=>{const next=[...document.querySelectorAll('[role="dialog"]')].at(-1);if(next!==dialog){if(!next){previous?.focus?.();dialog=null;return;}previous=document.activeElement;dialog=next;focusable()[0]?.focus();}});observer.observe(document.body,{childList:true,subtree:true});const keys=e=>{if(!dialog)return;if(e.key==='Escape'){const close=[...dialog.querySelectorAll('button')].find(b=>/kapat|×/i.test(b.textContent+' '+b.getAttribute('aria-label')));if(close){e.preventDefault();close.click();}}if(e.key==='Tab'){const a=focusable(),first=a[0],last=a.at(-1);if(e.shiftKey&&(document.activeElement===first||!dialog.contains(document.activeElement))){e.preventDefault();last?.focus();}else if(!e.shiftKey&&(document.activeElement===last||!dialog.contains(document.activeElement))){e.preventDefault();first?.focus();}}};document.addEventListener('keydown',keys);return()=>{observer.disconnect();document.removeEventListener('keydown',keys);};},[]);
@@ -1093,7 +1090,7 @@ function HistoryPanel({
 }) {
   return (
     <div className="quick-editor-backdrop manager-backdrop">
-      <section className="asset-manager history-manager">
+      <section className="asset-manager history-manager" role="dialog" aria-modal="true" aria-label="Çalışma geçmişi">
         <header>
           <div>
             <b>Çalışma geçmişi</b>
