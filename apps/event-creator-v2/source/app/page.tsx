@@ -1056,7 +1056,7 @@ export default function Home() {
             </div>
           </section>
         </aside>
-        <section className="preview-area" ref={previewWrap}>
+        <section className="preview-area" ref={previewWrap} style={{ height: "calc(100dvh - 135px)", top: 0 }}>
           <div className="preview-toolbar">
             <div>
               <b>Canlı önizleme</b>
