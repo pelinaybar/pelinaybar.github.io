@@ -18,7 +18,8 @@ const reverseTime=s=>{const a=String(s||'').match(/(\d{1,2})[.:](\d{2})\s*[-â€“â
 const duplicateKey=e=>normalize(e.club)+'|'+normalize(e.title)+'|'+e.date+'|'+e.time;
 function bounds(s){const d=new Date(s+'T12:00:00');d.setDate(d.getDate()-(d.getDay()+6)%7);const start=d.toLocaleDateString('en-CA');d.setDate(d.getDate()+6);return {start,end:d.toLocaleDateString('en-CA')};}
 function saveFile(name,data,type='application/json'){const url=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}
-const sorted=es=>[...es].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.time||'').localeCompare(b.time||''));
+const minutes=s=>{const m=String(s||'').match(/(\d{1,2})[.:](\d{2})/);return m?Number(m[1])*60+Number(m[2]):9999;};
+const sorted=es=>[...es].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||minutes(a.time)-minutes(b.time));
 const dateLabel=s=>validDate(s)?new Date(s+'T12:00:00').toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'}):s;
 export function ExcelImport({book,onClose,onImport}){
  const [sheet,setSheet]=useState(book.SheetNames.find(s=>normalize(s)==='pelin')||book.SheetNames.find(s=>normalize(s)==='tumetkinlikler')||book.SheetNames[0]);
@@ -27,7 +28,7 @@ export function ExcelImport({book,onClose,onImport}){
  useEffect(()=>{const i=grid.findIndex(r=>r.some(v=>aliases.title.includes(normalize(v)))&&r.some(v=>aliases.date.includes(normalize(v))));setHeader(Math.max(0,i));setChecked(false);setEdits({});setExcluded([]);},[sheet]);
  useEffect(()=>{const h=grid[header]||[];setMapping(Object.fromEntries(Object.keys(fields).map(k=>[k,h.findIndex(x=>aliases[k].includes(normalize(x)))])));setChecked(false);},[grid,header]);
  const headers=grid[header]||[];
- const records=grid.slice(header+1).map((r,i)=>({r,line:header+i+2})).filter(({r})=>r.some(v=>String(v).trim())).map(({r,line})=>{const e={id:crypto.randomUUID(),_line:line};for(const k of Object.keys(fields)){const v=r[mapping[k]];e[k]=k==='date'?parseCalendar(v):k==='time'&&typeof v==='number'?XLSX.SSF.format('hh:mm',v).replace(':','.'):String(v??'').trim();}return {...e,...edits[line]};});
+ const records=grid.slice(header+1).map((r,i)=>({r,line:header+i+2})).filter(({r})=>r.some(v=>String(v).trim())).map(({r,line})=>{const e={id:crypto.randomUUID(),_line:line};for(const k of Object.keys(fields)){const v=r[mapping[k]];e[k]=k==='date'?parseCalendar(typeof v==='number'&&book.Workbook?.WBProps?.date1904?v+1462:v):k==='time'&&typeof v==='number'?XLSX.SSF.format('hh:mm',v).replace(':','.'):String(v??'').trim();}return {...e,...edits[line]};});
  const selectedRecords=records.filter(e=>!excluded.includes(e._line));
  const duplicates=new Set(selectedRecords.filter((e,i,a)=>a.findIndex(x=>duplicateKey(x)===duplicateKey(e))<i).map(e=>e._line));
  const errors=selectedRecords.filter(e=>!e.club||!e.title||!validDate(e.date));
