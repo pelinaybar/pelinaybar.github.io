@@ -615,7 +615,7 @@ export default function Home() {
   }, [f.w, f.h,zoomMode,focusPreview]);
   useEffect(() => {
     fetch(`${PUBLIC_BASE}/logo-eslestirme-tablosu.csv`)
-      .then((r) => r.text())
+      .then((r) => {if(!r.ok)throw new Error("Logo listesi yüklenemedi");return r.text();})
       .then((text) => {
         const builtins: Record<string, string> = {},names={};
         text
@@ -720,6 +720,7 @@ export default function Home() {
       },
     ]);
     setSelected(id);
+    setQuickOpen(true);
   }
   function selectForEdit(id: string) {
     setSelected(id);
@@ -882,7 +883,7 @@ export default function Home() {
               <input
                 type="file"
                 accept=".xlsx,.xls"
-                onChange={(e) => importExcel(e.target.files?.[0])}
+                onChange={e=>{importExcel(e.target.files?.[0]);e.target.value="";}}
               />
               <ChevronDown size={17} />
             </label>
@@ -1414,17 +1415,8 @@ function SummaryGrid({
         const es = events.filter((e) => e.date === date),
           c = SUMMARY_COLORS[i % SUMMARY_COLORS.length],
           holiday = getHoliday(date),
-          clubs: { name: string; override?: string }[] = es
-            .slice(0, 10)
-            .flatMap((e) =>
-              e.logoOverride
-                ? [{ name: e.club, override: e.logoOverride }]
-                : splitClubs(e.club).map((name) => ({
-                    name,
-                    override: undefined,
-                  })),
-            )
-            .slice(0, 10);
+          allClubs=Array.from(new Map(es.flatMap(e=>e.logoOverride?[{name:e.club,override:e.logoOverride}]:splitClubs(e.club).map(name=>({name,override:undefined}))).map(c=>[normalize(c.name),c])).values()),
+          clubs=allClubs.slice(0,10);
         return (
           <article
             key={date}
@@ -1451,7 +1443,7 @@ function SummaryGrid({
                 />
               ))}
             </div>
-            {es.flatMap(e=>splitClubs(e.club)).length>clubs.length&&<small>+{es.flatMap(e=>splitClubs(e.club)).length-clubs.length} kulüp · Detay sayfalarında</small>}
+            {allClubs.length>clubs.length&&<small>+{allClubs.length-clubs.length} kulüp · Detay sayfalarında</small>}
           </article>
         );
       })}
