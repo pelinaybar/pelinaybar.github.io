@@ -3,7 +3,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import StudioTools, { ExcelImport } from "./studio-tools";
+import StudioTools, { ExcelImport, rowIssues } from "./studio-tools";
+import {resolveLogo,logoStatus,prepareImage,packPages,inspectNodes,ZoomView,ClubPicker,ExportReview,clubKey,packHistory,readHistory} from "./studio-core";
 import { toPng } from "html-to-image";
 import JSZip from "jszip";
 import {
@@ -394,11 +395,13 @@ const getHoliday = (iso: string) => {
   return labels.join(" · ");
 };
 const getCampus = (name: string) =>
-  Object.entries(CAMPUS).find(([k]) =>
+  ["online","cevrimici","zoom","microsoftteams","teams"].includes(normalize(name))?{key:"Çevrimiçi",color:"#107F88",soft:"#E4F4F6"}:Object.entries(CAMPUS).find(([k]) =>
     normalize(name).includes(normalize(k)),
   )?.[1] ?? { key: name.trim() || "Yerleşke belirtilmedi", color: "#B41655", soft: "#F9E8EF" };
 const campusLabel = (name: string) => {
   const label = name.trim();
+  if(["kurumdisi","diger","digeryerleskeler"].includes(normalize(label)))return "Diğer";
+  if(["online","cevrimici"].includes(normalize(label)))return "Çevrimiçi";
   return ["saglikyerleskesi", "npyerleskesi", "npsaglikyerleskesi", "np"].includes(normalize(label))
     ? "NP Sağlık Yerleşkesi"
     : label || "Yerleşke belirtilmedi";
@@ -409,7 +412,7 @@ const splitClubs = (club: string) =>
   club
     .split(/\s+(?:veya|&|\+)\s+|\s*[,;/]\s*/i)
     .filter(Boolean)
-    .slice(0, 3);
+    ;
 const startTime = (time: string) => {
   const m = time.match(/(\d{1,2})[.:](\d{2})/);
   return m ? Number(m[1]) * 60 + Number(m[2]) : 9999;
@@ -431,20 +434,11 @@ function ClubLogo({
       <img
         className={`club-logo ${small ? "small" : ""}`}
         src={override}
-        alt=""
+        alt={name+" logosu"}
       />
     );
-  const key = Object.keys(logos).find(
-    (k) => normalize(name).includes(k) || k.includes(normalize(name)),
-  );
-  if (key)
-    return (
-      <img
-        className={`club-logo ${small ? "small" : ""}`}
-        src={logos[key]}
-        alt=""
-      />
-    );
+  const match = resolveLogo(name, logos);
+  if (match.src) return <img className={`club-logo ${small ? "small" : ""}`} src={match.src} alt={name + " logosu"} data-logo-status={match.status} data-club={name}/>;
   const initials =
     name
       .replace(/Üsküdar Üniversitesi/gi, "")
@@ -455,7 +449,7 @@ function ClubLogo({
       .join("")
       .toLocaleUpperCase("tr-TR") || "SK";
   return (
-    <span className={`club-logo fallback ${small ? "small" : ""}`}>
+    <span className={`club-logo fallback ${small ? "small" : ""}`} data-logo-status={match.status} data-club={name} title={logoStatus(match)}>
       {initials}
     </span>
   );
@@ -465,8 +459,8 @@ export default function Home() {
   const [format, setFormat] = useState<Format>("post"),
     [events, rawSetEvents] = useState<EventItem[]>(samples),
     [selected, setSelected] = useState("1"),
-    [logos, setLogos] = useState<Record<string, string>>({}),
-    [background, setBackground] = useState(`${PUBLIC_BASE}/arka-plan.png`),
+    [logos, rawSetLogos] = useState<Record<string, string>>({}),
+    [background, rawSetBackground] = useState(`${PUBLIC_BASE}/arka-plan.png`),
     [scale, setScale] = useState(0.48),
     [notice, setNotice] = useState("Kulüp logoları hazır"),
     [page, setPage] = useState(0),
@@ -476,32 +470,28 @@ export default function Home() {
     [history, setHistory] = useState<DraftSnapshot[]>([]),
     [exporting, setExporting] = useState(false);
   const [importBook, setImportBook] = useState(null);
+  const [eventQuery,setEventQuery]=useState(""),[eventDay,setEventDay]=useState(""),[chromeHeight,setChromeHeight]=useState(135);
+  useEffect(()=>{const measure=()=>{setChromeHeight((document.querySelector(".topbar")?.getBoundingClientRect().height||76)+(document.querySelector(".studio-tools-bar")?.getBoundingClientRect().height||59));};const ro=new ResizeObserver(measure);for(const el of document.querySelectorAll(".topbar,.studio-tools-bar"))ro.observe(el);measure();return()=>ro.disconnect();},[]);
+  const [logoNames,setLogoNames]=useState({});
   const [rememberedPlaces, setRememberedPlaces] = useState([]);
   useEffect(()=>{try { setRememberedPlaces(JSON.parse(localStorage.getItem("sks-place-suggestions-v1")||"[]")); }catch{}},[]);
   useEffect(()=>{if(!hydrated.current)return;setRememberedPlaces(previous=>{const next=Array.from(new Map([...previous,...events].map(e=>[e.location+"|"+e.campus,{location:e.location,campus:e.campus}])).values()).slice(-300);try{localStorage.setItem("sks-place-suggestions-v1",JSON.stringify(next));}catch{}return next;});},[events]);
-  const undoRef = useRef<EventItem[][]>([]), redoRef = useRef<EventItem[][]>([]), eventsRef = useRef(events);
-  const [undoVersion, setUndoVersion] = useState(0);
-  eventsRef.current = events;
-  function setEvents(value) {
-    const previous = eventsRef.current;
-    const next = typeof value === "function" ? value(previous) : value;
-    if (next === previous) return;
-    undoRef.current = [...undoRef.current, previous].slice(-60);
-    redoRef.current = [];
-    eventsRef.current = next;
-    rawSetEvents(next);
-    setUndoVersion(v => v + 1);
-  }
-  function undoEvents() {
-    const previous = undoRef.current.pop(); if (!previous) return;
-    redoRef.current.push(eventsRef.current); eventsRef.current = previous;
-    rawSetEvents(previous); setUndoVersion(v=>v+1); setNotice("Son değişiklik geri alındı");
-  }
-  function redoEvents() {
-    const next = redoRef.current.pop(); if (!next) return;
-    undoRef.current.push(eventsRef.current); eventsRef.current=next;
-    rawSetEvents(next);setUndoVersion(v=>v+1);setNotice("Değişiklik yeniden uygulandı");
-  }
+  const [settings, rawSetSettings] = useState({logoShape:"circle"});
+  const [zoomMode,setZoomMode] = useState("fit"), [manualZoom,setManualZoom] = useState(1),[focusPreview,setFocusPreview] = useState(false);
+  const [pageMetrics,setPageMetrics] = useState({post:{heights:{},budget:760,gap:14},story:{heights:{},budget:1400,gap:20}});
+  const probeRef=useRef(null),builtinLogos=useRef({});
+  const [preflight,setPreflight]=useState(null),[inspectCard,setInspectCard]=useState(false);
+  const undoRef=useRef([]),redoRef=useRef([]),projectRef=useRef({events,logos,background,settings});
+  const [undoVersion,setUndoVersion]=useState(0);
+  projectRef.current={events,logos,background,settings};
+  function applyProject(p){projectRef.current=p;rawSetEvents(p.events);rawSetLogos(p.logos||{});rawSetBackground(p.background??"");rawSetSettings(p.settings||{logoShape:"circle"});}
+  function commitProject(patch){const prev=projectRef.current;if(Object.entries(patch).every(([k,v])=>prev[k]===v))return;const next={...prev,...patch};undoRef.current=[...undoRef.current,prev].slice(-40);redoRef.current=[];applyProject(next);setUndoVersion(v=>v+1);}
+  function setEvents(value){commitProject({events:typeof value==="function"?value(projectRef.current.events):value});}
+  function setLogos(value){commitProject({logos:typeof value==="function"?value(projectRef.current.logos):value});}
+  function setBackground(value){commitProject({background:typeof value==="function"?value(projectRef.current.background):value});}
+  function undoEvents(){const p=undoRef.current.pop();if(!p)return;redoRef.current.push(projectRef.current);applyProject(p);setUndoVersion(v=>v+1);setNotice("Değişiklik geri alındı: etkinlik, logo ve arka plan birlikte geri yüklendi");}
+  function redoEvents(){const p=redoRef.current.pop();if(!p)return;undoRef.current.push(projectRef.current);applyProject(p);setUndoVersion(v=>v+1);setNotice("Değişiklik yeniden uygulandı");}
+  const displayedScale=zoomMode==="fit"?scale:zoomMode==="width"?manualZoom:manualZoom;
   const previewWrap = useRef<HTMLDivElement>(null),
     canvas = useRef<HTMLDivElement>(null),
     dragged = useRef<string | null>(null),
@@ -543,14 +533,11 @@ export default function Home() {
   );
   const f =
     format === "mail" ? { ...FORMATS.mail, h: mailHeight } : FORMATS[format];
-  const socialPages = useMemo(() => {
-    const pages: EventItem[][] = [];
-    grouped.forEach(([, items]) => {
-      for (let i = 0; i < items.length; i += 4)
-        pages.push(items.slice(i, i + 4));
-    });
-    return pages.length ? pages : [[]];
-  }, [grouped]);
+  const postPages=useMemo(()=>packPages(grouped,pageMetrics.post.heights,pageMetrics.post.budget,pageMetrics.post.gap),[grouped,pageMetrics]);
+  const storyPages=useMemo(()=>packPages(grouped,pageMetrics.story.heights,pageMetrics.story.budget,pageMetrics.story.gap),[grouped,pageMetrics]);
+  const socialPages=format==="story"?storyPages:postPages;
+  useEffect(()=>{setPage(p=>Math.max(0,Math.min(p,socialPages.length-1)));},[socialPages.length]);
+  useEffect(()=>{let disposed=false;const measure=()=>{if(disposed||!probeRef.current)return;const result={};for(const kind of ["post","story"]){const root=probeRef.current.querySelector(`[data-probe="${kind}"]`);if(!root)continue;const heights={};root.querySelectorAll('[data-measure-id]').forEach(el=>heights[el.dataset.measureId]=el.offsetHeight);const body=root.querySelector('.design-body'),grid=root.querySelector('.cards-grid'),day=root.querySelector('.day-label'),style=getComputedStyle(body);const gap=grid?parseFloat(getComputedStyle(grid).rowGap)||14:14;const budget=(kind==="post"?1350:1920)-root.querySelector('.design-header').offsetHeight-root.querySelector('.design-footer').offsetHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)-(day?.offsetHeight||44)-20;result[kind]={heights,budget,gap};}setPageMetrics(old=>JSON.stringify(old)===JSON.stringify(result)?old:result);};document.fonts.ready.then(measure);const observer=new ResizeObserver(measure);if(probeRef.current)observer.observe(probeRef.current);window.addEventListener('resize',measure);return()=>{disposed=true;observer.disconnect();window.removeEventListener('resize',measure);};},[events,logos,settings]);
   const visibleGrouped = useMemo(() => {
     if (format !== "post" && format !== "story") return grouped;
     return Object.entries(
@@ -565,17 +552,16 @@ export default function Home() {
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-      const savedHistory = JSON.parse(
-        localStorage.getItem(HISTORY_KEY) || "[]",
-      ) as DraftSnapshot[];
-      if (saved?.events?.length) {
-        setEvents(saved.events);
-        setSelected(saved.events[0].id);
+      const savedHistory = readHistory(JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"));
+      if (Array.isArray(saved?.events)) {
+        rawSetEvents(saved.events);
+        setSelected(saved.events[0]?.id||"");
       }
-      if (saved?.logos) setLogos((current) => ({ ...current, ...saved.logos }));
-      if (saved?.background) setBackground(saved.background);
+      if (saved?.logos) rawSetLogos((current) => ({ ...current, ...saved.logos }));
+      if (typeof saved?.background==="string") rawSetBackground(saved.background);
+      if(saved?.settings)rawSetSettings(saved.settings);
       setHistory(savedHistory);
-      if (saved?.events?.length) setNotice("Son çalışma geri yüklendi");
+      if (Array.isArray(saved?.events)) setNotice("Son çalışma geri yüklendi");
     } catch {
       setNotice("Kayıtlı taslak okunamadı; örnek çalışma açıldı");
     } finally {
@@ -588,21 +574,19 @@ export default function Home() {
       try {
         localStorage.setItem(
           DRAFT_KEY,
-          JSON.stringify({ events, logos, background, savedAt: new Date() }),
+          JSON.stringify({ events, logos, background, settings, savedAt: new Date() }),
         );
-        const previous = JSON.parse(
-          localStorage.getItem(HISTORY_KEY) || "[]",
-        ) as DraftSnapshot[];
-        const signature = JSON.stringify(events);
-        if (JSON.stringify(previous[0]?.events) !== signature) {
+        const previous = readHistory(JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"));
+        const signature = JSON.stringify({events,logos,background,settings});
+        if (JSON.stringify(previous[0]&&{events:previous[0].events,logos:previous[0].logos,background:previous[0].background,settings:previous[0].settings}) !== signature) {
           const snapshot: DraftSnapshot = {
             id: crypto.randomUUID(),
             at: new Date().toISOString(),
             label: "Otomatik kayıt",
-            events,
+            events, logos, background, settings,
           };
           const next = [snapshot, ...previous].slice(0, 25);
-          localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(packHistory(next)));
           setHistory(next);
         }
       } catch {
@@ -610,7 +594,7 @@ export default function Home() {
       }
     }, 900);
     return () => window.clearTimeout(timer);
-  }, [events, logos, background]);
+  }, [events, logos, background, settings]);
   useEffect(() => {
     setPage(0);
   }, [format, events.length]);
@@ -620,19 +604,20 @@ export default function Home() {
       const stage = previewWrap.current.querySelector(".canvas-stage");
       const b = (stage || previewWrap.current).getBoundingClientRect();
       const height = canvas.current?.offsetHeight || f.h;
-      setScale(Math.min((b.width - 48) / f.w, (b.height - 48) / height, 0.72));
+      setScale(Math.min((b.width - 48) / f.w, (b.height - 48) / height, 1));
+      if(zoomMode==="width")setManualZoom(Math.max(.1,(b.width-48)/f.w));
     };
     update();
     const o = new ResizeObserver(update);
     if (previewWrap.current) o.observe(previewWrap.current);
     if (canvas.current) o.observe(canvas.current);
     return () => o.disconnect();
-  }, [f.w, f.h]);
+  }, [f.w, f.h,zoomMode,focusPreview]);
   useEffect(() => {
     fetch(`${PUBLIC_BASE}/logo-eslestirme-tablosu.csv`)
       .then((r) => r.text())
       .then((text) => {
-        const builtins: Record<string, string> = {};
+        const builtins: Record<string, string> = {},names={};
         text
           .replace(/^\uFEFF/, "")
           .split(/\r?\n/)
@@ -642,10 +627,9 @@ export default function Home() {
             if (comma < 1) return;
             const file = line.slice(0, comma).trim(),
               name = line.slice(comma + 1).trim();
-            if (file && name)
-              builtins[normalize(name)] = `${PUBLIC_BASE}/logos/${file}`;
+            if(file&&name){builtins[normalize(name)]=`${PUBLIC_BASE}/logos/${file}`;names[normalize(name)]=name;}
           });
-        setLogos((current) => ({ ...builtins, ...current }));
+        setLogoNames(names);builtinLogos.current=builtins;rawSetLogos((current) => ({ ...builtins, ...current }));
       })
       .catch(() => setNotice("Logolar yüklenemedi; özel klasör seçilebilir"));
   }, []);
@@ -659,27 +643,21 @@ export default function Home() {
       "tr-TR",
     );
   }, [events]);
-  const rangeExact = useMemo(() => {
-    const anchor = events
-      .map((e) => e.date)
-      .filter(Boolean)
-      .sort()[0];
-    return anchor ? displayWeekRange(anchor) : "Tarih Aralığı Seçilmedi";
-  }, [events]);
+  const rangeExact = useMemo(()=>{const ds=events.map(e=>e.date).filter(Boolean).sort();if(!ds.length)return "Hafta seçilmedi";return `${displayDate(weekBounds(ds[0]).start)} – ${displayDate(weekBounds(ds.at(-1)).end)}`;},[events]);
   function addHistory(label: string, items: EventItem[]) {
     const snapshot: DraftSnapshot = {
       id: crypto.randomUUID(),
       at: new Date().toISOString(),
       label,
-      events: items,
+      events: items,logos,background,settings,
     };
     const next = [snapshot, ...history].slice(0, 25);
     setHistory(next);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(packHistory(next)));
   }
   function restoreHistory(snapshot: DraftSnapshot) {
     addHistory("Geri yüklemeden önce", events);
-    setEvents(snapshot.events);
+    commitProject({events:snapshot.events,...(snapshot.logos?{logos:snapshot.logos}:{}),...(typeof snapshot.background==="string"?{background:snapshot.background}:{}),...(snapshot.settings?{settings:snapshot.settings}:{})});
     setSelected(snapshot.events[0]?.id || "");
     setHistoryOpen(false);
     setNotice(
@@ -702,21 +680,12 @@ export default function Home() {
     } catch { setNotice("Excel okunamadı; geçerli bir XLSX dosyası seçin"); }
   }
   async function importLogos(files: FileList | null) {
-    if (!files) return;
-    const next: Record<string, string> = {};
-    for (const file of Array.from(files))
-      next[normalize(file.name.replace(/\.[^.]+$/, ""))] =
-        await fileAsDataUrl(file);
-    setLogos((p) => ({ ...p, ...next }));
-    setNotice(`${files.length} logo eşleştirmeye hazır`);
+    if(!files)return;const next={},warnings=[];for(const file of Array.from(files)){try{const image=await prepareImage(file);next[normalize(file.name.replace(/\.[^.]+$/,""))]=image.data;if(image.warning)warnings.push(file.name+": "+image.warning);}catch(e){warnings.push(file.name+": "+e.message);}}if(Object.keys(next).length)setLogos(p=>({...p,...next}));setNotice(`${Object.keys(next).length} logo alındı. ${warnings.join(" · ")}`);
   }
-  async function replaceClubLogo(club: string, file?: File) {
-    if (!file) return;
-    const data = await fileAsDataUrl(file);
-    setLogos((current) => ({ ...current, [normalize(club)]: data }));
-    setNotice(`${club} logosu güncellendi ve taslağa kaydedildi`);
-  }
+  async function replaceClubLogo(club:string,file?:File){if(!file)return;try{const image=await prepareImage(file);setLogos(p=>({...p,[normalize(club)]:image.data}));setNotice(image.warning||`${club} logosu güncellendi`);}catch(e){setNotice(e.message);}}
+  function resetClubLogo(club){const key=normalize(club);setLogos(p=>{const next={...p};delete next[key];if(builtinLogos.current[key])next[key]=builtinLogos.current[key];return next;});}
   function update(id: string, key: keyof EventItem, value: string) {
+    if(key==="date"&&(!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(Date.parse(value)))){setNotice("Geçerli bir tarih seçin");return;}
     setEvents((current) => {
       const old = current.find((e) => e.id === id);
       if (!old) return current;
@@ -743,7 +712,7 @@ export default function Home() {
         id,
         club: "Yeni Kulüp",
         title: "Yeni Etkinlik",
-        date: v.at(-1)?.date || "2026-09-21",
+        date: v.at(-1)?.date || new Date().toLocaleDateString("en-CA"),
         time: "12.00–13.00",
         speaker: "",
         campus: "Merkez Yerleşkesi",
@@ -758,13 +727,14 @@ export default function Home() {
   }
   function moveEvent(sourceId: string, targetId: string) {
     if (sourceId === targetId) return;
+    const sourceDay=events.find(e=>e.id===sourceId)?.date,targetDay=events.find(e=>e.id===targetId)?.date;
+    if(sourceDay!==targetDay){setNotice("Gün değiştirmek için tarih alanını düzenleyin; sürükleme yalnızca aynı gün içindir.");return;}
     setEvents((current) => {
       const source = current.find((e) => e.id === sourceId),
         target = current.find((e) => e.id === targetId);
       if (!source || !target) return current;
-      const moved = current.map((e) =>
-          e.id === sourceId ? { ...e, date: target.date } : e,
-        ),
+      if(source.date!==target.date){setNotice("Sıralama yalnızca aynı gün içinde yapılır. Tarihi düzenleme ekranından değiştirin.");return current;}
+      const moved = current,
         day = moved
           .filter((e) => e.date === target.date)
           .sort(
@@ -788,97 +758,26 @@ export default function Home() {
     });
     setNotice("Kart sırası güncellendi");
   }
-  async function download() {
-    const exportName =
-      format === "mail"
-        ? "01-mail-bulteni.png"
-        : format === "summary"
-          ? "04-haftalik-ozet.png"
-          : format === "summaryStory"
-            ? "05-haftalik-ozet-story.png"
-            : format === "post"
-              ? `02-post-sayfa-${page + 1}.png`
-              : `03-story-sayfa-${page + 1}.png`;
-    const exportNode = document.querySelector<HTMLElement>(
-      `[data-export-name="${exportName}"]`,
-    );
-    if (!exportNode) return;
-    setNotice("PNG hazırlanıyor…");
-    await document.fonts.ready;
-    await Promise.all(
-      Array.from(exportNode.querySelectorAll("img")).map((image) =>
-        image.decode().catch(() => undefined),
-      ),
-    );
-    const width = Number(exportNode.dataset.exportWidth);
-    const height = exportNode.classList.contains("mail")
-      ? Math.ceil(Math.max(exportNode.offsetHeight, exportNode.scrollHeight))
-      : Number(exportNode.dataset.exportHeight);
-    const data = await toPng(exportNode, {
-      cacheBust: true,
-      pixelRatio: 1,
-      width,
-      height,
-      style: { transform: "none", height: `${height}px` },
-    });
-    const a = document.createElement("a");
-    a.download = exportName;
-    a.href = data;
-    a.click();
-    setNotice("Yüksek çözünürlüklü PNG indirildi");
+  function download(){const name=format==="mail"?"01-mail-bulteni.png":format==="summary"?"04-haftalik-ozet.png":format==="summaryStory"?"05-haftalik-ozet-story.png":format==="post"?`02-post-sayfa-${page+1}.png`:`03-story-sayfa-${page+1}.png`;runExport([name],false);}
+  function downloadAll(names){runExport(Array.isArray(names)?names:null,true);}
+  async function runExport(names,zipMode,approved=false){
+    if(exporting)return;setExporting(true);setNotice("Görseller ve içerik kontrol ediliyor…");
+    try{const nodes=Array.from(document.querySelectorAll('[data-export-name]')).filter(n=>!names||names.includes(n.dataset.exportName));if(!nodes.length)throw Error("İndirilecek sayfa yok.");await document.fonts.ready;await Promise.all(nodes.flatMap(n=>Array.from(n.querySelectorAll('img')).map(img=>img.decode().catch(()=>undefined))));
+      const issues=inspectNodes(nodes);for(const e of events){for(const message of rowIssues(e))issues.push({name:e.title||"Etkinlik",level:message.includes("Tarih")||message.includes("Kulüp eksik")||message.includes("Etkinlik adı")?"error":"warning",message});}const weeks=new Set(events.map(e=>weekBounds(e.date).start));if(weeks.size>1&&nodes.some(n=>n.classList.contains('summary')))issues.push({name:"Haftalık özet",level:"error",message:"Özet tek haftalıktır. Hafta ve arşiv ekranından bir hafta seçin."});if(!events.length)issues.push({name:"Çalışma",level:"error",message:"En az bir etkinlik ekleyin."});
+      if(issues.some(x=>x.level==="error")||(!approved&&issues.length)){setPreflight({issues,names,zip:zipMode});setNotice("İndirme öncesi kontrol sonuçlarını inceleyin");return;}
+      const zip=new JSZip();for(let i=0;i<nodes.length;i++){const node=nodes[i],width=Number(node.dataset.exportWidth),height=node.classList.contains('mail')?Math.ceil(Math.max(node.offsetHeight,node.scrollHeight)):Number(node.dataset.exportHeight);setNotice(`${i+1} / ${nodes.length} görsel hazırlanıyor…`);const data=await toPng(node,{cacheBust:true,pixelRatio:1,width,height,style:{transform:"none",height:`${height}px`}});if(zipMode)zip.file(node.dataset.exportName,data.split(',')[1],{base64:true});else{const a=document.createElement('a');a.href=data;a.download=node.dataset.exportName;a.click();}}
+      if(zipMode){const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`sks-etkinlik-${events.map(e=>e.date).sort()[0]||"tasarimlar"}.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}setNotice(`${nodes.length} görsel indirildi`);
+    }catch(e){setNotice(`İndirme tamamlanamadı: ${e.message||"Yeniden deneyin"}`);}finally{setExporting(false);}
   }
-  async function downloadAll(selectedNames?: string[]) {
-    if (exporting) return;
-    setExporting(true);
-    setNotice("Tüm tasarımlar hazırlanıyor…");
-    try {
-      const zip = new JSZip(),
-        nodes = Array.from(
-          document.querySelectorAll<HTMLElement>("[data-export-name]"),
-        ).filter(node => !Array.isArray(selectedNames) || selectedNames.includes(node.dataset.exportName || ""));
-      for (let i = 0; i < nodes.length; i++) {
-        await document.fonts.ready;
-        await Promise.all(Array.from(nodes[i].querySelectorAll("img")).map((image) => image.decode().catch(() => undefined)));
-        const node = nodes[i],
-          name = node.dataset.exportName || `tasarim-${i + 1}.png`,
-          w = Number(node.dataset.exportWidth),
-          h = node.classList.contains("mail")
-            ? Math.ceil(Math.max(node.offsetHeight, node.scrollHeight))
-            : Number(node.dataset.exportHeight);
-        setNotice(`${i + 1} / ${nodes.length} tasarım hazırlanıyor…`);
-        const data = await toPng(node, {
-          cacheBust: true,
-          pixelRatio: 1,
-          width: w,
-          height: h,
-          style: { transform: "none", height: `${h}px` },
-        });
-        zip.file(name, data.split(",")[1], { base64: true });
-      }
-      const blob = await zip.generateAsync({
-          type: "blob",
-          compression: "DEFLATE",
-          compressionOptions: { level: 6 },
-        }),
-        url = URL.createObjectURL(blob),
-        a = document.createElement("a");
-      a.href = url;
-      a.download = `sks-etkinlik-${events.map(e=>e.date).filter(Boolean).sort()[0] || "tasarimlar"}.zip`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setNotice(`${nodes.length} tasarım ZIP olarak indirildi`);
-    } catch {
-      setNotice("Toplu indirme hazırlanamadı; yeniden deneyin");
-    } finally {
-      setExporting(false);
-    }
-  }
-  const selectedEvent = events.find((e) => e.id === selected);
+
+  const selectedEvent=events.find(e=>e.id===selected)||events[0];
   const usedClubs = Array.from(
     new Set(events.flatMap((event) => splitClubs(event.club))),
   ).sort((a, b) => a.localeCompare(b, "tr-TR"));
   return (
-    <main className="studio-shell">
+    <main className="studio-shell" data-logo-shape={settings.logoShape}>
+      {inspectCard&&selectedEvent&&<div className="tools-backdrop"><section role="dialog" aria-modal="true" aria-label="Etkinlik kartı inceleme" className="tools-dialog card-inspection"><header><h2>Etkinlik kartı · Büyük inceleme</h2><button onClick={()=>setInspectCard(false)}>Kapat</button></header><div className="tools-body"><div className="design-canvas post" style={{width:1080,height:"auto",padding:24}}><EventCard event={selectedEvent} logos={logos} onSelect={()=>{setInspectCard(false);setQuickOpen(true);}} onMove={()=>{}} dragged={dragged}/></div></div></section></div>}
+      {preflight&&<ExportReview issues={preflight.issues} busy={exporting} onClose={()=>setPreflight(null)} onContinue={()=>{const p=preflight;setPreflight(null);runExport(p.names,p.zip,true);}}/>}
       {importBook && <ExcelImport book={importBook} onClose={()=>setImportBook(null)} onImport={items=>{addHistory("Excel aktarımı öncesi",events);setEvents(items);setSelected(items[0]?.id||"");setImportBook(null);setNotice(`${items.length} etkinlik kontrol edilerek aktarıldı`);}}/>}
       {quickOpen && selectedEvent && (
         <QuickEditor
@@ -886,6 +785,8 @@ export default function Home() {
           onClose={() => setQuickOpen(false)}
           onUpdate={(key, value) => update(selected, key, value)}
           suggestions={[...rememberedPlaces,...events]}
+          clubNames={Array.from(new Set([...usedClubs,...Object.values(logoNames)]))}
+          logos={logos} onImageError={setNotice}
           onDelete={() => {
             setEvents((v) => v.filter((e) => e.id !== selected));
             setQuickOpen(false);
@@ -895,9 +796,13 @@ export default function Home() {
       {logoManagerOpen && (
         <LogoManager
           clubs={usedClubs}
+          names={logoNames}
           logos={logos}
           onClose={() => setLogoManagerOpen(false)}
           onReplace={replaceClubLogo}
+          onReset={resetClubLogo}
+          onMatch={(club,key)=>setLogos(p=>({...p,[normalize(club)]:p[key]}))}
+          logoShape={settings.logoShape} onShape={value=>commitProject({settings:{...settings,logoShape:value}})}
           onFolder={importLogos}
         />
       )}
@@ -936,7 +841,7 @@ export default function Home() {
           </button>
         </div>
       </header>
-      <StudioTools events={events} setEvents={setEvents} logos={logos} setLogos={setLogos} background={background} setBackground={setBackground} onNotice={setNotice} onUndo={undoEvents} onRedo={redoEvents} canUndo={undoRef.current.length>0} canRedo={redoRef.current.length>0} onExport={downloadAll}/>
+      <StudioTools events={events} setEvents={setEvents} logos={logos} setLogos={setLogos} background={background} setBackground={setBackground} onNotice={setNotice} onUndo={undoEvents} onRedo={redoEvents} canUndo={undoRef.current.length>0} canRedo={redoRef.current.length>0} onExport={downloadAll} settings={settings} onRestoreProject={p=>commitProject(p)} rangeLabel={rangeExact}/>
       <div className="workspace">
         <aside className="controls">
           <section className="control-section">
@@ -1012,7 +917,7 @@ export default function Home() {
                 accept="image/*"
                 onChange={async (e) => {
                   const x = e.target.files?.[0];
-                  if (x) setBackground(await fileAsDataUrl(x));
+                  if(x){try{const image=await prepareImage(x,{background:true});setBackground(image.data);if(image.warning)setNotice(image.warning);}catch(err){setNotice(err.message);}}
                 }}
               />
               <ChevronDown size={17} />
@@ -1025,12 +930,13 @@ export default function Home() {
                 <b>Etkinlikler</b>
                 <small>{events.length} kayıt · alanlar düzenlenebilir</small>
               </div>
-              <button className="icon-btn" onClick={addEvent}>
+              <button className="icon-btn" aria-label="Yeni etkinlik ekle" title="Yeni etkinlik ekle" onClick={addEvent}>
                 <Plus size={18} />
               </button>
             </div>
+            <div className="event-filters"><input aria-label="Etkinlik veya kulüp ara" placeholder="Etkinlik veya kulüp ara" value={eventQuery} onChange={e=>setEventQuery(e.target.value)}/><input aria-label="Etkinlik günü filtresi" type="date" value={eventDay} onChange={e=>setEventDay(e.target.value)}/></div>
             <div className="event-list">
-              {events.map((e) => (
+              {events.filter(e=>(!eventDay||e.date===eventDay)&&normalize(e.club+e.title).includes(normalize(eventQuery))).map((e) => (
                 <button
                   key={e.id}
                   onClick={() => selectForEdit(e.id)}
@@ -1056,12 +962,12 @@ export default function Home() {
             </div>
           </section>
         </aside>
-        <section className="preview-area" ref={previewWrap} style={{ height: "calc(100dvh - 135px)", top: 0 }}>
+        <section className={`preview-area ${focusPreview?"focus-preview":""}`} ref={previewWrap} style={{ height: focusPreview?"100dvh":`calc(100dvh - ${chromeHeight}px)`, top: 0 }}>
           <div className="preview-toolbar">
             <div>
               <b>Canlı önizleme</b>
               <small>
-                {f.label} · %{Math.round(scale * 100)} ölçek
+                {f.label} · %{Math.round(displayedScale * 100)} ölçek
               </small>
             </div>
             {(format === "post" || format === "story") && (
@@ -1085,8 +991,9 @@ export default function Home() {
                 </button>
               </div>
             )}
+            <div className="zoom-tools"><button disabled={!selectedEvent} onClick={()=>setInspectCard(true)}>Seçili kartı incele</button><button aria-label="Uzaklaştır" onClick={()=>{setZoomMode("manual");setManualZoom(Math.max(.1,displayedScale-.1));}}>−</button><select aria-label="Yakınlaştırma" value={zoomMode==="fit"?"fit":zoomMode==="width"?"width":String(Math.round(manualZoom*100))} onChange={e=>{if(e.target.value==="fit"||e.target.value==="width")setZoomMode(e.target.value);else{setZoomMode("manual");setManualZoom(Number(e.target.value)/100);}}}><option value="fit">Ekrana sığdır</option><option value="width">Genişliğe sığdır</option>{Array.from(new Set([25,50,75,100,125,150,200,Math.round(manualZoom*100)])).sort((a,b)=>a-b).map(z=><option key={z} value={z}>%{z}</option>)}</select><button aria-label="Yakınlaştır" onClick={()=>{setZoomMode("manual");setManualZoom(Math.min(2,displayedScale+.1));}}>+</button><button onClick={()=>setFocusPreview(!focusPreview)}>{focusPreview?"Geniş görünümü kapat":"Geniş görünüm"}</button></div>
             <div className="legend">
-              {[CAMPUS.merkez, CAMPUS.güney, CAMPUS.np, CAMPUS.çarşı].map(
+              {[CAMPUS.merkez, CAMPUS.güney, CAMPUS.np, CAMPUS.çarşı,{key:"Diğer",color:"#B41655"},{key:"Çevrimiçi",color:"#107F88"}].map(
                 (x) => (
                   <span key={x.key}>
                     <i style={{ background: x.color }} />
@@ -1096,7 +1003,7 @@ export default function Home() {
               )}
             </div>
           </div>
-          <div className="canvas-stage">
+          <ZoomView scale={displayedScale} mode={zoomMode} width={f.w} height={canvas.current?.offsetHeight||f.h}>
             <div
               className={`design-canvas ${format === "summaryStory" ? "summary summary-story" : format}`}
               ref={canvas}
@@ -1104,7 +1011,7 @@ export default function Home() {
                 width: f.w,
                 height: format === "mail" ? "auto" : f.h,
                 minHeight: format === "mail" ? mailHeight : undefined,
-                transform: `scale(${scale})`,
+                transform: `scale(${displayedScale})`,
                 backgroundImage: background
                   ? `linear-gradient(180deg,rgba(5,40,29,.82),rgba(5,26,21,.94)),url(${background})`
                   : undefined,
@@ -1137,12 +1044,14 @@ export default function Home() {
               )}
               <DesignFooter />
             </div>
-          </div>
+          </ZoomView>
         </section>
       </div>
+      <div ref={probeRef} className="layout-probes" aria-hidden="true">{["post","story"].map(kind=><div key={kind} data-probe={kind} className={`design-canvas ${kind}`} style={{width:1080,height:"auto",overflow:"visible"}}><DesignHeader range={rangeExact} count={events.length}/><div className="design-body"><div className="day-label"><b>Pazartesi</b></div><div className="cards-grid">{events.map(e=><div key={e.id} data-measure-id={e.id}><EventCard event={e} logos={logos} onSelect={()=>{}} onMove={()=>{}} dragged={dragged}/></div>)}</div></div><DesignFooter/></div>)}</div>
       <BatchExports
         grouped={grouped}
-        pages={socialPages}
+        pages={postPages}
+        storyPages={storyPages}
         events={events}
         logos={logos}
         background={background}
@@ -1152,69 +1061,10 @@ export default function Home() {
     </main>
   );
 }
-function LogoManager({
-  clubs,
-  logos,
-  onClose,
-  onReplace,
-  onFolder,
-}: {
-  clubs: string[];
-  logos: Record<string, string>;
-  onClose: () => void;
-  onReplace: (club: string, file?: File) => void;
-  onFolder: (files: FileList | null) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const visible = clubs.filter((club) =>
-    normalize(club).includes(normalize(query)),
-  );
-  return (
-    <div className="quick-editor-backdrop manager-backdrop">
-      <section className="asset-manager">
-        <header>
-          <div>
-            <b>Kulüp logolarını yönet</b>
-            <small>Bir logoya tıklayarak yalnızca o kulübü güncelleyin.</small>
-          </div>
-          <button onClick={onClose}>×</button>
-        </header>
-        <div className="manager-tools">
-          <input
-            placeholder="Kulüp ara…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <label>
-            Logo klasörü yükle
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              {...({ webkitdirectory: "" } as object)}
-              onChange={(e) => onFolder(e.target.files)}
-            />
-          </label>
-        </div>
-        <div className="club-logo-list">
-          {visible.map((club) => (
-            <label className="club-logo-item" key={club}>
-              <ClubLogo name={club} logos={logos} />
-              <span>
-                <b>{club}</b>
-                <small>Logoyu değiştirmek için tıklayın</small>
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => onReplace(club, e.target.files?.[0])}
-              />
-            </label>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
+function LogoManager({clubs,logos,names,onClose,onReplace,onFolder,onReset,onMatch,logoShape,onShape}){
+ const [query,setQuery]=useState(""),[onlyUsed,setOnlyUsed]=useState(true);
+ const roster=Array.from(new Set([...clubs,...(onlyUsed?[]:Object.values(names))])).sort((a,b)=>a.localeCompare(b,"tr-TR"));
+ return <div className="quick-editor-backdrop manager-backdrop"><section className="asset-manager" role="dialog" aria-modal="true" aria-label="Kulüp logolarını yönet"><header><div><b>Kulüp logolarını yönet</b><small>Belirsiz adlarda doğru logoyu seçin. Tam eşleşmeler önceliklidir.</small></div><button aria-label="Logo yönetimini kapat" onClick={onClose}>×</button></header><div className="manager-tools"><input aria-label="Kulüp ara" placeholder="Kulüp ara…" value={query} onChange={e=>setQuery(e.target.value)}/><label>Logo klasörü yükle<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple {...{webkitdirectory:""}} onChange={e=>onFolder(e.target.files)}/></label></div><div className="manager-settings"><label><input type="checkbox" checked={onlyUsed} onChange={e=>setOnlyUsed(e.target.checked)}/>Yalnızca bu çalışmadaki kulüpler</label><label>Logo çerçevesi<select value={logoShape} onChange={e=>onShape(e.target.value)}><option value="circle">Daire</option><option value="square">Yuvarlatılmış kare</option></select></label><p>En fazla 10 MB. Logoların dış boşlukları temizlenir ve büyük görseller küçültülür.</p></div><div className="club-logo-list">{roster.filter(n=>normalize(n).includes(normalize(query))).map(club=>{const r=resolveLogo(club,logos);return <div className="club-logo-item logo-edit-item" key={club}><ClubLogo name={club} logos={logos}/><div><b>{club}</b><small className={'match-'+r.status}>{logoStatus(r)}</small><label>Logo seç / değiştir<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={e=>onReplace(club,e.target.files?.[0])}/></label><select aria-label={`${club} için logo eşleştir`} value={r.key||""} onChange={e=>{if(e.target.value)onMatch(club,e.target.value);}}><option value="">Kayıtlı logoyla eşleştir</option>{Object.keys(logos).sort((a,b)=>(names[a]||a).localeCompare(names[b]||b,"tr")).map(key=><option key={key} value={key}>{names[key]||key}{r.candidates?.includes(key)?" (benzer ad)":""}</option>)}</select><button onClick={()=>onReset(club)}>Varsayılana dön</button></div></div>})}</div></section></div>;
 }
 
 function HistoryPanel({
@@ -1232,7 +1082,7 @@ function HistoryPanel({
         <header>
           <div>
             <b>Çalışma geçmişi</b>
-            <small>Son 25 otomatik ve Excel öncesi sürüm saklanır.</small>
+            <small>Son 25 sürüm; etkinlik, logo, arka plan ve tasarım ayarlarıyla saklanır.</small>
           </div>
           <button onClick={onClose}>×</button>
         </header>
@@ -1264,13 +1114,13 @@ function QuickEditor({
   onClose,
   onUpdate,
   onDelete,
-  suggestions,
+  suggestions,clubNames,logos,onImageError,
 }: {
   event: EventItem;
   onClose: () => void;
   onUpdate: (key: keyof EventItem, value: string) => void;
   onDelete: () => void;
-  suggestions: EventItem[];
+  suggestions: EventItem[];clubNames:string[];logos:any;onImageError:any;
 }) {
   return (
     <div
@@ -1295,13 +1145,9 @@ function QuickEditor({
               onChange={(e) => onUpdate("title", e.target.value)}
             />
           </label>
-          <label className="wide">
-            Kulüp adı
-            <input
-              value={event.club}
-              onChange={(e) => onUpdate("club", e.target.value)}
-            />
-          </label>
+          <label className="wide">Kulüp adı<input value={event.club} onChange={e=>onUpdate("club",e.target.value)}/></label>
+          <ClubPicker value={event.club} names={clubNames.filter(n=>n.includes(" "))} onChange={v=>onUpdate("club",v)}/>
+          <p className="logo-hint">{splitClubs(event.club).map(n=>`${n}: ${logoStatus(resolveLogo(n,logos))}`).join(" · ")}</p>
           <label>
             Tarih
             <input
@@ -1357,20 +1203,13 @@ function QuickEditor({
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = () =>
-                    onUpdate("logoOverride", String(reader.result));
-                  reader.readAsDataURL(file);
-                }
-              }}
+              onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{const image=await prepareImage(file);onUpdate("logoOverride",image.data);if(image.warning)onImageError(image.warning);}catch(err){onImageError(err.message);}}}
             />
             <em>
               {event.logoOverride ? "Özel logo seçildi" : "Logo değiştir"}
             </em>
           </label>
+          {event.logoOverride&&<button onClick={()=>onUpdate("logoOverride","")}>Etkinliğe özel logoyu kaldır</button>}
         </div>
         <footer>
           <button className="delete" onClick={onDelete}>
@@ -1453,7 +1292,8 @@ function EventCard({
     <article
       className="design-card interactive"
       draggable
-      onDragStart={() => {
+      onDragStart={e => {
+        if(e.currentTarget.closest(".zoom-stage")){e.preventDefault();return;}
         dragged.current = event.id;
       }}
       onDragEnd={() => {
@@ -1464,7 +1304,8 @@ function EventCard({
         e.preventDefault();
         if (dragged.current) onMove(dragged.current, event.id);
       }}
-      onClick={() => onSelect(event.id)}
+      onClick={e=>{if(!e.currentTarget.closest(".zoom-stage"))onSelect(event.id);}}
+      onDoubleClick={()=>onSelect(event.id)}
       title="Düzenlemek için tıklayın; sıralamak için sürükleyin"
       style={{ "--c": c.color, "--soft": c.soft } as React.CSSProperties}
     >
@@ -1474,7 +1315,7 @@ function EventCard({
           logos={logos}
           override={event.logoOverride}
         />
-        <span>{event.club}</span>
+        <span>{event.club.toLocaleUpperCase("tr-TR")}</span>
       </div>
       <h3>{event.title}</h3>
       <div className="time">{event.time}</div>
@@ -1610,6 +1451,7 @@ function SummaryGrid({
                 />
               ))}
             </div>
+            {es.flatMap(e=>splitClubs(e.club)).length>clubs.length&&<small>+{es.flatMap(e=>splitClubs(e.club)).length-clubs.length} kulüp · Detay sayfalarında</small>}
           </article>
         );
       })}
@@ -1668,6 +1510,7 @@ function DesignFooter() {
 }
 
 function BatchExports({
+  storyPages,
   grouped,
   pages,
   events,
@@ -1677,7 +1520,7 @@ function BatchExports({
   mailHeight,
 }: {
   grouped: [string, EventItem[]][];
-  pages: EventItem[][];
+  pages: EventItem[][];storyPages:EventItem[][];
   events: EventItem[];
   logos: Record<string, string>;
   background: string;
@@ -1740,7 +1583,7 @@ function BatchExports({
           <DesignFooter />
         </div>
       ))}
-      {pages.map((items, i) => (
+      {storyPages.map((items, i) => (
         <div
           key={`story-${i}`}
           className="design-canvas story"
