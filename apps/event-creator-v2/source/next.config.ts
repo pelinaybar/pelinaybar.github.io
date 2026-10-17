@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   basePath: "/apps/event-creator-v2",
   trailingSlash: true,
   images: { unoptimized: true },
-  typescript: { ignoreBuildErrors: true },
+
 };
 
 export default nextConfig;

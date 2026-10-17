@@ -1,8 +1,8 @@
-// @ts-nocheck
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
+import {validateProject,duplicateKey,campusText,validDate} from "./studio-model";
 import StudioTools, { ExcelImport, rowIssues } from "./studio-tools";
 import {resolveLogo,logoStatus,prepareImage,packPages,inspectNodes,ZoomView,ClubPicker,ExportReview,clubKey,packHistory,readHistory} from "./studio-core";
 import { toPng } from "html-to-image";
@@ -35,13 +35,16 @@ type EventItem = {
   title: string;
   date: string;
   time: string;
+  endDate?: string;
   speaker: string;
   campus: string;
   location: string;
   order?: number;
   logoOverride?: string;
 };
+declare global { interface Window { __sksDragged?: boolean } }
 type DraftSnapshot = {
+  logos?:Record<string,string>;background?:string;settings?:any;
   id: string;
   at: string;
   label: string;
@@ -398,14 +401,7 @@ const getCampus = (name: string) =>
   ["online","cevrimici","zoom","microsoftteams","teams"].includes(normalize(name))?{key:"Çevrimiçi",color:"#107F88",soft:"#E4F4F6"}:Object.entries(CAMPUS).find(([k]) =>
     normalize(name).includes(normalize(k)),
   )?.[1] ?? { key: name.trim() || "Yerleşke belirtilmedi", color: "#B41655", soft: "#F9E8EF" };
-const campusLabel = (name: string) => {
-  const label = name.trim();
-  if(["kurumdisi","diger","digeryerleskeler"].includes(normalize(label)))return "Diğer";
-  if(["online","cevrimici"].includes(normalize(label)))return "Çevrimiçi";
-  return ["saglikyerleskesi", "npyerleskesi", "npsaglikyerleskesi", "np"].includes(normalize(label))
-    ? "NP Sağlık Yerleşkesi"
-    : label || "Yerleşke belirtilmedi";
-};
+const campusLabel = (name:string) => campusText(name)||"Yerleşke belirtilmedi";
 // “ve” kulüp adının doğal bir parçası olabilir. Ortak kulüp yalnızca “veya”
 // ya da açık ayraçlarla (&, +, virgül, noktalı virgül, /) belirtilir.
 const splitClubs = (club: string) =>
@@ -476,16 +472,20 @@ export default function Home() {
   const [rememberedPlaces, setRememberedPlaces] = useState([]);
   useEffect(()=>{try { setRememberedPlaces(JSON.parse(localStorage.getItem("sks-place-suggestions-v1")||"[]")); }catch{}},[]);
   useEffect(()=>{if(!hydrated.current)return;setRememberedPlaces(previous=>{const next=Array.from(new Map([...previous,...events].map(e=>[e.location+"|"+e.campus,{location:e.location,campus:e.campus}])).values()).slice(-300);try{localStorage.setItem("sks-place-suggestions-v1",JSON.stringify(next));}catch{}return next;});},[events]);
-  const [settings, rawSetSettings] = useState({logoShape:"circle"});
+  const [settings, rawSetSettings] = useState<any>({logoShape:"circle"});
   const [zoomMode,setZoomMode] = useState("fit"), [manualZoom,setManualZoom] = useState(1),[focusPreview,setFocusPreview] = useState(false);
-  const [pageMetrics,setPageMetrics] = useState({post:{heights:{},budget:760,gap:14},story:{heights:{},budget:1400,gap:20}});
-  const probeRef=useRef(null),builtinLogos=useRef({});
+  const [pageMetrics,setPageMetrics] = useState<any>({post:{heights:{},budget:760,gap:14},story:{heights:{},budget:1400,gap:20}});
+  const probeRef=useRef<HTMLDivElement>(null),builtinLogos=useRef({});
   const [preflight,setPreflight]=useState(null),[inspectCard,setInspectCard]=useState(false);
   const undoRef=useRef([]),redoRef=useRef([]),projectRef=useRef({events,logos,background,settings});
+  const autoStarted=useRef(false),exportLock=useRef(false);
+  const writerId=useRef(""),conflictRef=useRef(false),lastUndo=useRef({at:0,field:""}),cancelExport=useRef(false);
+  const [saveStatus,setSaveStatus]=useState("Çalışma açılıyor"),[conflict,setConflict]=useState(null);
+  function persistProject(p){if(!hydrated.current||conflictRef.current)return;try{localStorage.setItem(DRAFT_KEY,JSON.stringify({...p,savedAt:new Date().toISOString(),writer:writerId.current}));setSaveStatus("Kaydedildi");}catch{setSaveStatus("Kaydedilemedi · Proje yedeği indirin");setNotice("Depolama dolu. Proje yedeğini indirin; Proje yedeği ekranından otomatik geçmişi temizleyebilirsiniz.");}}
   const [undoVersion,setUndoVersion]=useState(0);
   projectRef.current={events,logos,background,settings};
-  function applyProject(p){projectRef.current=p;rawSetEvents(p.events);rawSetLogos(p.logos||{});rawSetBackground(p.background??"");rawSetSettings(p.settings||{logoShape:"circle"});}
-  function commitProject(patch){const prev=projectRef.current;if(Object.entries(patch).every(([k,v])=>prev[k]===v))return;const next={...prev,...patch};undoRef.current=[...undoRef.current,prev].slice(-40);redoRef.current=[];applyProject(next);setUndoVersion(v=>v+1);}
+  function applyProject(p){projectRef.current=p;rawSetEvents(p.events);rawSetLogos(p.logos||{});rawSetBackground(p.background??"");rawSetSettings(p.settings||{logoShape:"circle"});setSelected(current=>p.events.some(e=>e.id===current)?current:(p.events[0]?.id||""));}
+  function commitProject(patch){if(conflictRef.current||exportLock.current)return;const prev=projectRef.current;if(Object.entries(patch).every(([k,v])=>prev[k]===v))return;const next={...prev,...patch};const focused=document.activeElement,field=focused?.matches('input,textarea')?(focused.getAttribute('aria-label')||focused.closest('label')?.textContent||focused.tagName):"";const now=Date.now();if(!field||lastUndo.current.field!==field||now-lastUndo.current.at>1200)undoRef.current=[...undoRef.current,prev].slice(-40);lastUndo.current={at:now,field};redoRef.current=[];applyProject(next);persistProject(next);setUndoVersion(v=>v+1);}
   function setEvents(value){commitProject({events:typeof value==="function"?value(projectRef.current.events):value});}
   function setLogos(value){commitProject({logos:typeof value==="function"?value(projectRef.current.logos):value});}
   function setBackground(value){commitProject({background:typeof value==="function"?value(projectRef.current.background):value});}
@@ -511,8 +511,7 @@ export default function Home() {
               date,
               items.sort(
                 (a, b) =>
-                  (a.order ?? startTime(a.time)) -
-                  (b.order ?? startTime(b.time)),
+                  ((a.order ?? Infinity) - (b.order ?? Infinity)) || startTime(a.time)-startTime(b.time),
               ),
             ] as [string, EventItem[]],
         ),
@@ -533,11 +532,11 @@ export default function Home() {
   );
   const f =
     format === "mail" ? { ...FORMATS.mail, h: mailHeight } : FORMATS[format];
-  const postPages=useMemo(()=>packPages(grouped,pageMetrics.post.heights,pageMetrics.post.budget,pageMetrics.post.gap),[grouped,pageMetrics]);
-  const storyPages=useMemo(()=>packPages(grouped,pageMetrics.story.heights,pageMetrics.story.budget,pageMetrics.story.gap),[grouped,pageMetrics]);
+  const postPages=useMemo<EventItem[][]>(()=>packPages(grouped,pageMetrics.post.heights,pageMetrics.post.budget,pageMetrics.post.gap),[grouped,pageMetrics]);
+  const storyPages=useMemo<EventItem[][]>(()=>packPages(grouped,pageMetrics.story.heights,pageMetrics.story.budget,pageMetrics.story.gap),[grouped,pageMetrics]);
   const socialPages=format==="story"?storyPages:postPages;
   useEffect(()=>{setPage(p=>Math.max(0,Math.min(p,socialPages.length-1)));},[socialPages.length]);
-  useEffect(()=>{let disposed=false;const measure=()=>{if(disposed||!probeRef.current)return;const result={};for(const kind of ["post","story"]){const root=probeRef.current.querySelector(`[data-probe="${kind}"]`);if(!root)continue;const heights={};root.querySelectorAll('[data-measure-id]').forEach(el=>heights[el.dataset.measureId]=el.offsetHeight);const body=root.querySelector('.design-body'),grid=root.querySelector('.cards-grid'),day=root.querySelector('.day-label'),style=getComputedStyle(body);const gap=grid?parseFloat(getComputedStyle(grid).rowGap)||14:14;const budget=(kind==="post"?1350:1920)-root.querySelector('.design-header').offsetHeight-root.querySelector('.design-footer').offsetHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)-(day?.offsetHeight||44)-20;result[kind]={heights,budget,gap};}setPageMetrics(old=>JSON.stringify(old)===JSON.stringify(result)?old:result);};document.fonts.ready.then(measure);const observer=new ResizeObserver(measure);if(probeRef.current)observer.observe(probeRef.current);window.addEventListener('resize',measure);return()=>{disposed=true;observer.disconnect();window.removeEventListener('resize',measure);};},[events,logos,settings]);
+  useEffect(()=>{let disposed=false;const measure=()=>{if(disposed||!probeRef.current)return;const result:any={};for(const kind of ["post","story"]){const root=probeRef.current.querySelector(`[data-probe="${kind}"]`);if(!root)continue;const heights={};root.querySelectorAll<HTMLElement>('[data-measure-id]').forEach(el=>heights[el.dataset.measureId]=el.offsetHeight);const body=root.querySelector('.design-body'),grid=root.querySelector('.cards-grid'),day=root.querySelector<HTMLElement>('.day-label'),style=getComputedStyle(body);const gap=grid?parseFloat(getComputedStyle(grid).rowGap)||14:14;const budget=(kind==="post"?1350:1920)-root.querySelector<HTMLElement>('.design-header').offsetHeight-root.querySelector<HTMLElement>('.design-footer').offsetHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)-(day?.offsetHeight||44)-20;result[kind]={heights,budget,gap};}setPageMetrics(old=>JSON.stringify(old)===JSON.stringify(result)?old:result);};document.fonts.ready.then(measure);const observer=new ResizeObserver(measure);if(probeRef.current)observer.observe(probeRef.current);window.addEventListener('resize',measure);return()=>{disposed=true;observer.disconnect();window.removeEventListener('resize',measure);};},[events,logos,settings]);
   const visibleGrouped = useMemo(() => {
     if (format !== "post" && format !== "story") return grouped;
     return Object.entries(
@@ -551,7 +550,10 @@ export default function Home() {
   }, [format, grouped, page, socialPages]);
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+      writerId.current=crypto.randomUUID();
+      const raw = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+      const checked=raw?validateProject(raw):null,saved=checked?.project;
+      if(checked?.warnings.length)setNotice(checked.warnings.join(" "));
       const savedHistory = readHistory(JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"));
       if (Array.isArray(saved?.events)) {
         rawSetEvents(saved.events);
@@ -559,22 +561,26 @@ export default function Home() {
       }
       if (saved?.logos) rawSetLogos((current) => ({ ...current, ...saved.logos }));
       if (typeof saved?.background==="string") rawSetBackground(saved.background);
-      if(saved?.settings)rawSetSettings(saved.settings);
-      setHistory(savedHistory);
+      if(saved?.settings){const old=JSON.parse(localStorage.getItem("sks-share-edits-v1")||"null");rawSetSettings({...saved.settings,...(!Object.keys(saved.settings.shareDraft?.texts||{}).length&&old?.texts?{shareDraft:old}:{})});}
+      setHistory(savedHistory.filter(p=>{try{validateProject(p);return true;}catch{return false;}}));
       if (Array.isArray(saved?.events)) setNotice("Son çalışma geri yüklendi");
     } catch {
-      setNotice("Kayıtlı taslak okunamadı; örnek çalışma açıldı");
+      try{const raw=localStorage.getItem(DRAFT_KEY);if(raw)localStorage.setItem("sks-recovery-draft",raw);}catch{}
+      setNotice("Kayıtlı taslak geçersiz; örnek çalışma açıldı. Proje yedeği ekranından kurtarma dosyasını indirin.");
     } finally {
-      hydrated.current = true;
+      hydrated.current = true;setSaveStatus("Kaydedildi");
     }
   }, []);
   useEffect(() => {
-    if (!hydrated.current) return;
+    if(!autoStarted.current){autoStarted.current=true;return;}
+    if (!hydrated.current||conflictRef.current) return;
+    persistProject(projectRef.current);
     const timer = window.setTimeout(() => {
+      if(conflictRef.current)return;
       try {
         localStorage.setItem(
           DRAFT_KEY,
-          JSON.stringify({ events, logos, background, settings, savedAt: new Date() }),
+          JSON.stringify({ events, logos, background, settings, savedAt: new Date(),writer:writerId.current }),
         );
         const previous = readHistory(JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"));
         const signature = JSON.stringify({events,logos,background,settings});
@@ -590,11 +596,15 @@ export default function Home() {
           setHistory(next);
         }
       } catch {
-        setNotice("Tarayıcı depolama alanı dolu; eski taslakları temizleyin");
+        setNotice("Geçmiş kaydedilemedi. Proje yedeği ekranından otomatik geçmişi temizleyin veya yedek indirin.");
       }
     }, 900);
     return () => window.clearTimeout(timer);
   }, [events, logos, background, settings]);
+  useEffect(()=>{const flush=()=>persistProject(projectRef.current);const storage=e=>{if(e.key!==DRAFT_KEY||!e.newValue)return;try{const raw=JSON.parse(e.newValue);if(raw.writer===writerId.current)return;const {project}=validateProject(raw);conflictRef.current=true;setConflict(project);setSaveStatus("Başka sekmede değişiklik var");}catch{setNotice("Diğer sekmedeki kayıt geçersiz; bu çalışma korundu.");}};window.addEventListener('pagehide',flush);window.addEventListener('storage',storage);return()=>{window.removeEventListener('pagehide',flush);window.removeEventListener('storage',storage);};},[]);
+  useEffect(()=>{try{const p=JSON.parse(localStorage.getItem('sks-view-v1')||'null');if(p){setZoomMode(['fit','width','manual'].includes(p.mode)?p.mode:'fit');setManualZoom(Math.max(.1,Math.min(2,Number(p.zoom)||1)));}}catch{}},[]);
+  useEffect(()=>{try{localStorage.setItem('sks-view-v1',JSON.stringify({mode:zoomMode,zoom:manualZoom}));}catch{}},[zoomMode,manualZoom]);
+  useEffect(()=>{let dialog=null,previous=null;const focusable=()=>dialog?[...dialog.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]')].filter(e=>!e.disabled&&e.getClientRects().length):[];const observer=new MutationObserver(()=>{const next=[...document.querySelectorAll('[role="dialog"]')].at(-1);if(next!==dialog){if(!next){previous?.focus?.();dialog=null;return;}previous=document.activeElement;dialog=next;focusable()[0]?.focus();}});observer.observe(document.body,{childList:true,subtree:true});const keys=e=>{if(!dialog)return;if(e.key==='Escape'){const close=[...dialog.querySelectorAll('button')].find(b=>/kapat|×/i.test(b.textContent+' '+b.getAttribute('aria-label')));if(close){e.preventDefault();close.click();}}if(e.key==='Tab'){const a=focusable(),first=a[0],last=a.at(-1);if(e.shiftKey&&(document.activeElement===first||!dialog.contains(document.activeElement))){e.preventDefault();last?.focus();}else if(!e.shiftKey&&(document.activeElement===last||!dialog.contains(document.activeElement))){e.preventDefault();first?.focus();}}};document.addEventListener('keydown',keys);return()=>{observer.disconnect();document.removeEventListener('keydown',keys);};},[]);
   useEffect(() => {
     setPage(0);
   }, [format, events.length]);
@@ -680,12 +690,12 @@ export default function Home() {
     } catch { setNotice("Excel okunamadı; geçerli bir XLSX dosyası seçin"); }
   }
   async function importLogos(files: FileList | null) {
-    if(!files)return;const next={},warnings=[];for(const file of Array.from(files)){try{const image=await prepareImage(file);next[normalize(file.name.replace(/\.[^.]+$/,""))]=image.data;if(image.warning)warnings.push(file.name+": "+image.warning);}catch(e){warnings.push(file.name+": "+e.message);}}if(Object.keys(next).length)setLogos(p=>({...p,...next}));setNotice(`${Object.keys(next).length} logo alındı. ${warnings.join(" · ")}`);
+    if(!files)return;const next={},warnings=[];for(const file of Array.from(files)){try{const image=await prepareImage(file,{trim:settings.trimLogos||false});next[normalize(file.name.replace(/\.[^.]+$/,""))]=image.data;if(image.warning)warnings.push(file.name+": "+image.warning);}catch(e){warnings.push(file.name+": "+e.message);}}if(Object.keys(next).length)setLogos(p=>({...p,...next}));setNotice(`${Object.keys(next).length} logo alındı. ${warnings.join(" · ")}`);
   }
-  async function replaceClubLogo(club:string,file?:File){if(!file)return;try{const image=await prepareImage(file);setLogos(p=>({...p,[normalize(club)]:image.data}));setNotice(image.warning||`${club} logosu güncellendi`);}catch(e){setNotice(e.message);}}
+  async function replaceClubLogo(club:string,file?:File){if(!file)return;try{const image=await prepareImage(file,{trim:settings.trimLogos||false});setLogos(p=>({...p,[normalize(club)]:image.data}));setNotice(image.warning||`${club} logosu güncellendi`);}catch(e){setNotice(e.message);}}
   function resetClubLogo(club){const key=normalize(club);setLogos(p=>{const next={...p};delete next[key];if(builtinLogos.current[key])next[key]=builtinLogos.current[key];return next;});}
   function update(id: string, key: keyof EventItem, value: string) {
-    if(key==="date"&&(!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(Date.parse(value)))){setNotice("Geçerli bir tarih seçin");return;}
+    if((key==="date"||key==="endDate"&&value)&&!validDate(value)){setNotice("Geçerli bir tarih seçin");return;}
     setEvents((current) => {
       const old = current.find((e) => e.id === id);
       if (!old) return current;
@@ -740,7 +750,7 @@ export default function Home() {
           .filter((e) => e.date === target.date)
           .sort(
             (a, b) =>
-              (a.order ?? startTime(a.time)) - (b.order ?? startTime(b.time)),
+              ((a.order ?? Infinity) - (b.order ?? Infinity)) || startTime(a.time)-startTime(b.time),
           ),
         without = day.filter((e) => e.id !== sourceId),
         targetIndex = Math.max(
@@ -760,15 +770,16 @@ export default function Home() {
     setNotice("Kart sırası güncellendi");
   }
   function download(){const name=format==="mail"?"01-mail-bulteni.png":format==="summary"?"04-haftalik-ozet.png":format==="summaryStory"?"05-haftalik-ozet-story.png":format==="post"?`02-post-sayfa-${page+1}.png`:`03-story-sayfa-${page+1}.png`;runExport([name],false);}
-  function downloadAll(names){runExport(Array.isArray(names)?names:null,true);}
+  function downloadAll(names=null){runExport(Array.isArray(names)?names:null,true);}
   async function runExport(names,zipMode,approved=false){
-    if(exporting)return;setExporting(true);setNotice("Görseller ve içerik kontrol ediliyor…");
-    try{const nodes=Array.from(document.querySelectorAll('[data-export-name]')).filter(n=>!names||names.includes(n.dataset.exportName));if(!nodes.length)throw Error("İndirilecek sayfa yok.");await document.fonts.ready;await Promise.all(nodes.flatMap(n=>Array.from(n.querySelectorAll('img')).map(img=>img.decode().catch(()=>undefined))));
-      const issues=inspectNodes(nodes);for(const e of events){for(const message of rowIssues(e))issues.push({name:e.title||"Etkinlik",level:message.includes("Tarih")||message.includes("Kulüp eksik")||message.includes("Etkinlik adı")?"error":"warning",message});}for(let i=0;i<events.length;i++){const e=events[i];if(events.findIndex(x=>normalize(x.club)===normalize(e.club)&&normalize(x.title)===normalize(e.title)&&x.date===e.date&&startTime(x.time)===startTime(e.time))<i)issues.push({name:e.title,level:"warning",message:"Aynı kulüp, tarih ve saatte tekrarlanan etkinlik var."});}const weeks=new Set(events.map(e=>weekBounds(e.date).start));if(weeks.size>1&&nodes.some(n=>n.classList.contains('summary')))issues.push({name:"Haftalık özet",level:"error",message:"Özet tek haftalıktır. Hafta ve arşiv ekranından bir hafta seçin."});if(!events.length)issues.push({name:"Çalışma",level:"error",message:"En az bir etkinlik ekleyin."});
+    let snapshotHost:HTMLDivElement=null;
+    if(exporting)return;cancelExport.current=false;exportLock.current=true;setExporting(true);setNotice("Görseller ve içerik kontrol ediliyor…");
+    try{const nodes=Array.from(document.querySelectorAll<HTMLElement>('[data-export-name]')).filter(n=>!names||names.includes(n.dataset.exportName));if(!nodes.length)throw Error("İndirilecek sayfa yok.");await document.fonts.ready;await Promise.all(nodes.flatMap(n=>Array.from(n.querySelectorAll('img')).map(img=>img.decode().catch(()=>undefined))));
+      const selectedIds=new Set(nodes.flatMap(n=>[...n.querySelectorAll<HTMLElement>("[data-event-id]")].map(c=>c.dataset.eventId))),exportEvents=selectedIds.size?events.filter(e=>selectedIds.has(e.id)):events;const issues=inspectNodes(nodes);for(const e of exportEvents){for(const message of rowIssues(e))issues.push({name:e.title||"Etkinlik",level:message.includes("Tarih")||message.includes("Kulüp eksik")||message.includes("Etkinlik adı")?"error":"warning",message});}for(let i=0;i<exportEvents.length;i++){const e=exportEvents[i];if(exportEvents.findIndex(x=>duplicateKey(x)===duplicateKey(e))<i)issues.push({name:e.title,level:"warning",message:"Aynı kulüp, tarih ve saatte tekrarlanan etkinlik var."});}const weeks=new Set(events.map(e=>weekBounds(e.date).start));if(weeks.size>1&&nodes.some(n=>n.classList.contains('summary')))issues.push({name:"Haftalık özet",level:"error",message:"Özet tek haftalıktır. Hafta ve arşiv ekranından bir hafta seçin."});if(!events.length)issues.push({name:"Çalışma",level:"error",message:"En az bir etkinlik ekleyin."});
       if(issues.some(x=>x.level==="error")||(!approved&&issues.length)){setPreflight({issues,names,zip:zipMode});setNotice("İndirme öncesi kontrol sonuçlarını inceleyin");return;}
-      const zip=new JSZip();for(let i=0;i<nodes.length;i++){const node=nodes[i],width=Number(node.dataset.exportWidth),height=node.classList.contains('mail')?Math.ceil(Math.max(node.offsetHeight,node.scrollHeight)):Number(node.dataset.exportHeight);setNotice(`${i+1} / ${nodes.length} görsel hazırlanıyor…`);const data=await toPng(node,{cacheBust:true,pixelRatio:1,width,height,style:{transform:"none",height:`${height}px`}});if(zipMode)zip.file(node.dataset.exportName,data.split(',')[1],{base64:true});else{const a=document.createElement('a');a.href=data;a.download=node.dataset.exportName;a.click();}}
-      if(zipMode){const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`sks-etkinlik-${events.map(e=>e.date).sort()[0]||"tasarimlar"}.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}setNotice(`${nodes.length} görsel indirildi`);
-    }catch(e){setNotice(`İndirme tamamlanamadı: ${e.message||"Yeniden deneyin"}`);}finally{setExporting(false);}
+      snapshotHost=document.createElement('div');snapshotHost.style.cssText='position:fixed;left:-30000px;top:0;pointer-events:none;';snapshotHost.dataset.logoShape=settings.logoShape;document.querySelector('main').appendChild(snapshotHost);const snapshots=nodes.map(node=>{const copy=node.cloneNode(true) as HTMLElement;copy.style.transform='none';snapshotHost.appendChild(copy);return copy;});const zip=new JSZip();for(let i=0;i<nodes.length;i++){if(cancelExport.current)throw Error("Kullanıcı tarafından iptal edildi.");const node=snapshots[i],width=Number(node.dataset.exportWidth),height=node.classList.contains('mail')?Math.ceil(Math.max(node.offsetHeight,node.scrollHeight)):Number(node.dataset.exportHeight);setNotice(`${i+1} / ${nodes.length} görsel hazırlanıyor…`);const data=await toPng(node,{cacheBust:true,pixelRatio:1,width,height,style:{transform:"none",height:`${height}px`}});if(cancelExport.current)throw Error('Kullanıcı tarafından iptal edildi.');if(zipMode)zip.file(node.dataset.exportName,data.split(',')[1],{base64:true});else{const a=document.createElement('a');a.href=data;a.download=node.dataset.exportName;a.click();}}
+      if(zipMode){if(cancelExport.current)throw Error("Kullanıcı tarafından iptal edildi.");const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},()=>{if(cancelExport.current)throw Error("Kullanıcı tarafından iptal edildi.");}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`sks-etkinlik-${events.map(e=>e.date).sort()[0]||"tasarimlar"}.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}setNotice(`${nodes.length} görsel için indirme başlatıldı`);
+    }catch(e){setNotice(`İndirme tamamlanamadı: ${e.message||"Yeniden deneyin"}`);}finally{snapshotHost?.remove();exportLock.current=false;setExporting(false);}
   }
 
   const selectedEvent=events.find(e=>e.id===selected)||events[0];
@@ -777,6 +788,9 @@ export default function Home() {
   ).sort((a, b) => a.localeCompare(b, "tr-TR"));
   return (
     <main className="studio-shell" data-logo-shape={settings.logoShape}>
+      <div className="save-status" role="status">{saveStatus}</div>
+      {conflict&&<div className="tools-backdrop"><section className="tools-dialog" role="dialog" aria-modal="true" aria-label="Sekmeler arasında kayıt çakışması"><header><h2>Başka sekmede çalışma değişti</h2></header><div className="tools-body"><p>Bu sekmenin otomatik kaydı durduruldu. Kullanılacak sürümü seçin. Kendi sürümünüzü korumadan önce diğer sekmeyi kapatın.</p><button onClick={()=>{conflictRef.current=false;applyProject(conflict);setConflict(null);setSaveStatus("Diğer sekmenin sürümü açıldı");}}>Diğer sekmenin sürümünü aç</button><button onClick={()=>{conflictRef.current=false;setConflict(null);persistProject(projectRef.current);}}>Bu sekmenin sürümünü koru</button></div></section></div>}
+      {exporting&&<div className="export-lock" role="dialog" aria-modal="true" aria-label="İndirme hazırlanıyor"><p>{notice}</p><button onClick={()=>{cancelExport.current=true;setNotice("İptal ediliyor…");}}>İndirmeyi iptal et</button></div>}
       {inspectCard&&selectedEvent&&<div className="tools-backdrop"><section role="dialog" aria-modal="true" aria-label="Etkinlik kartı inceleme" className="tools-dialog card-inspection"><header><h2>Etkinlik kartı · Büyük inceleme</h2><button onClick={()=>setInspectCard(false)}>Kapat</button></header><div className="tools-body"><div className="design-canvas post" style={{width:1080,height:"auto",padding:24}}><EventCard event={selectedEvent} logos={logos} onSelect={()=>{setInspectCard(false);setQuickOpen(true);}} onMove={()=>{}} dragged={dragged}/></div></div></section></div>}
       {preflight&&<ExportReview issues={preflight.issues} busy={exporting} onClose={()=>setPreflight(null)} onContinue={()=>{const p=preflight;setPreflight(null);runExport(p.names,p.zip,true);}}/>}
       {importBook && <ExcelImport book={importBook} onClose={()=>setImportBook(null)} onImport={items=>{addHistory("Excel aktarımı öncesi",events);setEvents(items);setSelected(items[0]?.id||"");setImportBook(null);setNotice(`${items.length} etkinlik kontrol edilerek aktarıldı`);}}/>}
@@ -784,10 +798,10 @@ export default function Home() {
         <QuickEditor
           event={selectedEvent}
           onClose={() => setQuickOpen(false)}
-          onUpdate={(key, value) => update(selected, key, value)}
+          onUpdate={(key, value) => update(selectedEvent.id, key, value)}
           suggestions={[...rememberedPlaces,...events]}
-          clubNames={Array.from(new Set([...usedClubs,...Object.values(logoNames)]))}
-          logos={logos} onImageError={setNotice}
+          clubNames={Array.from(new Set<string>([...usedClubs,...Object.values(logoNames) as string[]]))}
+          logos={logos} trimLogos={settings.trimLogos||false} onImageError={setNotice}
           onDelete={() => {
             setEvents((v) => v.filter((e) => e.id !== selected));
             setQuickOpen(false);
@@ -803,7 +817,7 @@ export default function Home() {
           onReplace={replaceClubLogo}
           onReset={resetClubLogo}
           onMatch={(club,key)=>setLogos(p=>({...p,[normalize(club)]:p[key]}))}
-          logoShape={settings.logoShape} onShape={value=>commitProject({settings:{...settings,logoShape:value}})}
+          trimLogos={settings.trimLogos||false} onTrim={value=>commitProject({settings:{...settings,trimLogos:value}})} logoShape={settings.logoShape} onShape={value=>commitProject({settings:{...settings,logoShape:value}})}
           onFolder={importLogos}
         />
       )}
@@ -842,7 +856,7 @@ export default function Home() {
           </button>
         </div>
       </header>
-      <StudioTools events={events} setEvents={setEvents} logos={logos} setLogos={setLogos} background={background} setBackground={setBackground} onNotice={setNotice} onUndo={undoEvents} onRedo={redoEvents} canUndo={undoRef.current.length>0} canRedo={redoRef.current.length>0} onExport={downloadAll} settings={settings} onRestoreProject={p=>commitProject(p)} rangeLabel={rangeExact}/>
+      <StudioTools events={events} setEvents={setEvents} logos={logos} setLogos={setLogos} background={background} setBackground={setBackground} onNotice={setNotice} onUndo={undoEvents} onRedo={redoEvents} canUndo={undoRef.current.length>0} canRedo={redoRef.current.length>0} onExport={downloadAll} settings={settings} onRestoreProject={p=>commitProject(validateProject(p).project)} onSettings={value=>commitProject({settings:value})} rangeLabel={rangeExact}/>
       <div className="workspace">
         <aside className="controls">
           <section className="control-section">
@@ -949,7 +963,7 @@ export default function Home() {
                   }
                 >
                   <div className="mini-logo">
-                    <ClubLogo name={e.club} logos={logos} small />
+                    <span className="mini-logos">{splitClubs(e.club).map((club,i)=><ClubLogo key={club} name={club} logos={logos} small override={i===0?e.logoOverride:undefined}/>)}</span>
                   </div>
                   <span>
                     <b>{e.title}</b>
@@ -992,7 +1006,7 @@ export default function Home() {
                 </button>
               </div>
             )}
-            <div className="zoom-tools"><button disabled={!selectedEvent} onClick={()=>setInspectCard(true)}>Seçili kartı incele</button><button aria-label="Uzaklaştır" onClick={()=>{setZoomMode("manual");setManualZoom(Math.max(.1,displayedScale-.1));}}>−</button><select aria-label="Yakınlaştırma" value={zoomMode==="fit"?"fit":zoomMode==="width"?"width":String(Math.round(manualZoom*100))} onChange={e=>{if(e.target.value==="fit"||e.target.value==="width")setZoomMode(e.target.value);else{setZoomMode("manual");setManualZoom(Number(e.target.value)/100);}}}><option value="fit">Ekrana sığdır</option><option value="width">Genişliğe sığdır</option>{Array.from(new Set([25,50,75,100,125,150,200,Math.round(manualZoom*100)])).sort((a,b)=>a-b).map(z=><option key={z} value={z}>%{z}</option>)}</select><button aria-label="Yakınlaştır" onClick={()=>{setZoomMode("manual");setManualZoom(Math.min(2,displayedScale+.1));}}>+</button><button onClick={()=>setFocusPreview(!focusPreview)}>{focusPreview?"Geniş görünümü kapat":"Geniş görünüm"}</button></div>
+            <div className="zoom-tools" title="Kartı düzenlemek için tıklayın. Yakın görünümde alanı sürükleyerek gezinin."><button disabled={!selectedEvent} onClick={()=>setInspectCard(true)}>Seçili kartı incele</button><button aria-label="Uzaklaştır" onClick={()=>{setZoomMode("manual");setManualZoom(Math.max(.1,displayedScale-.1));}}>−</button><select aria-label="Yakınlaştırma" value={zoomMode==="fit"?"fit":zoomMode==="width"?"width":String(Math.round(manualZoom*100))} onChange={e=>{if(e.target.value==="fit"||e.target.value==="width")setZoomMode(e.target.value);else{setZoomMode("manual");setManualZoom(Number(e.target.value)/100);}}}><option value="fit">Ekrana sığdır</option><option value="width">Genişliğe sığdır</option>{Array.from(new Set([25,50,75,100,125,150,200,Math.round(manualZoom*100)])).sort((a,b)=>a-b).map(z=><option key={z} value={z}>%{z}</option>)}</select><button aria-label="Yakınlaştır" onClick={()=>{setZoomMode("manual");setManualZoom(Math.min(2,displayedScale+.1));}}>+</button><button onClick={()=>setFocusPreview(!focusPreview)}>{focusPreview?"Geniş görünümü kapat":"Geniş görünüm"}</button></div>
             <div className="legend">
               {[CAMPUS.merkez, CAMPUS.güney, CAMPUS.np, CAMPUS.çarşı,{key:"Diğer",color:"#B41655"},{key:"Çevrimiçi",color:"#107F88"}].map(
                 (x) => (
@@ -1062,10 +1076,10 @@ export default function Home() {
     </main>
   );
 }
-function LogoManager({clubs,logos,names,onClose,onReplace,onFolder,onReset,onMatch,logoShape,onShape}){
- const [query,setQuery]=useState(""),[onlyUsed,setOnlyUsed]=useState(true);
- const roster=Array.from(new Set([...clubs,...(onlyUsed?[]:Object.values(names))])).sort((a,b)=>a.localeCompare(b,"tr-TR"));
- return <div className="quick-editor-backdrop manager-backdrop"><section className="asset-manager" role="dialog" aria-modal="true" aria-label="Kulüp logolarını yönet"><header><div><b>Kulüp logolarını yönet</b><small>Belirsiz adlarda doğru logoyu seçin. Tam eşleşmeler önceliklidir.</small></div><button aria-label="Logo yönetimini kapat" onClick={onClose}>×</button></header><div className="manager-tools"><input aria-label="Kulüp ara" placeholder="Kulüp ara…" value={query} onChange={e=>setQuery(e.target.value)}/><label>Logo klasörü yükle<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple {...{webkitdirectory:""}} onChange={e=>onFolder(e.target.files)}/></label></div><div className="manager-settings"><label><input type="checkbox" checked={onlyUsed} onChange={e=>setOnlyUsed(e.target.checked)}/>Yalnızca bu çalışmadaki kulüpler</label><label>Logo çerçevesi<select value={logoShape} onChange={e=>onShape(e.target.value)}><option value="circle">Daire</option><option value="square">Yuvarlatılmış kare</option></select></label><p>En fazla 10 MB. Logoların dış boşlukları temizlenir ve büyük görseller küçültülür.</p></div><div className="club-logo-list">{roster.filter(n=>normalize(n).includes(normalize(query))).map(club=>{const r=resolveLogo(club,logos);return <div className="club-logo-item logo-edit-item" key={club}><ClubLogo name={club} logos={logos}/><div><b>{club}</b><small className={'match-'+r.status}>{logoStatus(r)}</small><label>Logo seç / değiştir<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={e=>onReplace(club,e.target.files?.[0])}/></label><select aria-label={`${club} için logo eşleştir`} value={r.key||""} onChange={e=>{if(e.target.value)onMatch(club,e.target.value);}}><option value="">Kayıtlı logoyla eşleştir</option>{Object.keys(logos).sort((a,b)=>(names[a]||a).localeCompare(names[b]||b,"tr")).map(key=><option key={key} value={key}>{names[key]||key}{r.candidates?.includes(key)?" (benzer ad)":""}</option>)}</select><button onClick={()=>onReset(club)}>Varsayılana dön</button></div></div>})}</div></section></div>;
+function LogoManager({clubs,logos,names,onClose,onReplace,onFolder,onReset,onMatch,logoShape,onShape,trimLogos,onTrim}){
+ const [query,setQuery]=useState(""),[onlyUsed,setOnlyUsed]=useState(true),[aliasName,setAliasName]=useState(""),[aliasTarget,setAliasTarget]=useState("");
+ const roster=Array.from(new Set<string>([...clubs,...(onlyUsed?[]:Object.values(names) as string[])])).sort((a,b)=>a.localeCompare(b,"tr-TR"));
+ return <div className="quick-editor-backdrop manager-backdrop"><section className="asset-manager" role="dialog" aria-modal="true" aria-label="Kulüp logolarını yönet"><header><div><b>Kulüp logolarını yönet</b><small>Belirsiz adlarda doğru logoyu seçin. Tam eşleşmeler önceliklidir.</small></div><button aria-label="Logo yönetimini kapat" onClick={onClose}>×</button></header><div className="manager-tools"><input aria-label="Kulüp ara" placeholder="Kulüp ara…" value={query} onChange={e=>setQuery(e.target.value)}/><label>Logo klasörü yükle<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple {...{webkitdirectory:""}} onChange={e=>onFolder(e.target.files)}/></label></div><div className="manager-settings"><label><input type="checkbox" checked={onlyUsed} onChange={e=>setOnlyUsed(e.target.checked)}/>Yalnızca bu çalışmadaki kulüpler</label><label>Logo çerçevesi<select value={logoShape} onChange={e=>onShape(e.target.value)}><option value="circle">Daire</option><option value="square">Yuvarlatılmış kare</option></select></label><label><input type="checkbox" checked={trimLogos} onChange={e=>onTrim(e.target.checked)}/>Yeni yüklemelerde beyaz / şeffaf kenarları kırp</label><p>En fazla 10 MB. Kırpma kapalıysa orijinal oran ve boşluklar korunur. Değişikliği görmek için logoyu yeniden yükleyin.</p></div><div className="manager-settings"><label>Alternatif kulüp adı<input value={aliasName} onChange={e=>setAliasName(e.target.value)}/></label><label>Bu adı kayıtlı logoyla eşleştir<select value={aliasTarget} onChange={e=>setAliasTarget(e.target.value)}><option value="">Logo seçin</option>{Object.keys(logos).map(k=><option key={k} value={k}>{names[k]||k}</option>)}</select></label><button disabled={!aliasName.trim()||!aliasTarget} onClick={()=>{onMatch(aliasName.trim(),aliasTarget);setAliasName("");}}>Alternatif adı kaydet</button></div><div className="club-logo-list">{roster.filter(n=>normalize(n).includes(normalize(query))).map(club=>{const r=resolveLogo(club,logos);return <div className="club-logo-item logo-edit-item" key={club}><ClubLogo name={club} logos={logos}/><div><b>{club}</b><small className={'match-'+r.status}>{logoStatus(r)}</small><label>Logo seç / değiştir<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={e=>onReplace(club,e.target.files?.[0])}/></label><select aria-label={`${club} için logo eşleştir`} value={r.key||""} onChange={e=>{if(e.target.value)onMatch(club,e.target.value);}}><option value="">Kayıtlı logoyla eşleştir</option>{Object.keys(logos).sort((a,b)=>(names[a]||a).localeCompare(names[b]||b,"tr")).map(key=><option key={key} value={key}>{names[key]||key}{r.candidates?.includes(key)?" (benzer ad)":""}</option>)}</select><button onClick={()=>onReset(club)}>Varsayılana dön</button></div></div>})}</div></section></div>;
 }
 
 function HistoryPanel({
@@ -1115,13 +1129,13 @@ function QuickEditor({
   onClose,
   onUpdate,
   onDelete,
-  suggestions,clubNames,logos,onImageError,
+  suggestions,clubNames,logos,onImageError,trimLogos,
 }: {
   event: EventItem;
   onClose: () => void;
   onUpdate: (key: keyof EventItem, value: string) => void;
   onDelete: () => void;
-  suggestions: EventItem[];clubNames:string[];logos:any;onImageError:any;
+  suggestions: {location:string;campus:string}[];clubNames:string[];logos:any;onImageError:any;trimLogos:boolean;
 }) {
   return (
     <div
@@ -1130,7 +1144,7 @@ function QuickEditor({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <section className="quick-editor">
+      <section className="quick-editor" role="dialog" aria-modal="true" aria-label="Etkinliği düzenle">
         <header>
           <div>
             <b>Etkinliği düzenle</b>
@@ -1157,6 +1171,7 @@ function QuickEditor({
               onChange={(e) => onUpdate("date", e.target.value)}
             />
           </label>
+          <label>Bitiş tarihi (geceyi aşan etkinlik)<input type="date" min={event.date} value={event.endDate||""} onChange={e=>onUpdate("endDate",e.target.value)}/></label>
           <label>
             Saat
             <input
@@ -1198,13 +1213,13 @@ function QuickEditor({
             <span>
               <b>Etkinlik logosu</b>
               <small>
-                Kulüp adına göre otomatik eşleşir veya özel logo yüklenebilir.
+                Yüklenen özel logo yalnızca bu etkinlikte kullanılır; kulübün diğer etkinlikleri etkilenmez.
               </small>
             </span>
             <input
               type="file"
               accept="image/*"
-              onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{const image=await prepareImage(file);onUpdate("logoOverride",image.data);if(image.warning)onImageError(image.warning);}catch(err){onImageError(err.message);}}}
+              onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{const image=await prepareImage(file,{trim:trimLogos});onUpdate("logoOverride",image.data);if(image.warning)onImageError(image.warning);}catch(err){onImageError(err.message);}}}
             />
             <em>
               {event.logoOverride ? "Özel logo seçildi" : "Logo değiştir"}
@@ -1292,6 +1307,7 @@ function EventCard({
   return (
     <article
       className="design-card interactive"
+      data-event-id={event.id}
       draggable
       onDragStart={e => {
         if(e.currentTarget.closest(".zoom-stage")){e.preventDefault();return;}
@@ -1305,7 +1321,7 @@ function EventCard({
         e.preventDefault();
         if (dragged.current) onMove(dragged.current, event.id);
       }}
-      onClick={e=>{if(!e.currentTarget.closest(".zoom-stage"))onSelect(event.id);}}
+      onClick={e=>{if(!e.currentTarget.closest(".zoom-stage")||!window.__sksDragged)onSelect(event.id);}}
       onDoubleClick={()=>onSelect(event.id)}
       title="Düzenlemek için tıklayın; sıralamak için sürükleyin"
       style={{ "--c": c.color, "--soft": c.soft } as React.CSSProperties}
@@ -1319,7 +1335,7 @@ function EventCard({
         <span>{event.club.toLocaleUpperCase("tr-TR")}</span>
       </div>
       <h3>{event.title}</h3>
-      <div className="time">{event.time}</div>
+      <div className="time">{event.time}{event.endDate&&event.endDate!==event.date?` · Bitiş: ${new Date(event.endDate+"T12:00:00").toLocaleDateString("tr-TR")}`:""}</div>
       <div className="meta">
         <span>
           <MapPin /> {event.location || "Mekân bilgisi eklenecek"}

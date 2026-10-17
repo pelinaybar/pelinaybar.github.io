@@ -1,2 +1,2 @@
-:HL["/apps/event-creator-v2/_next/static/css/df55756be0ccff70.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}},"staleTime":300,"buildId":"L5VKU9dxNeisr6VEl8Xya"}
+:HL["/apps/event-creator-v2/_next/static/css/6f34e871ba9138f0.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}},"staleTime":300,"buildId":"-ln2SxA4Uj9j4qDCRizfJ"}
