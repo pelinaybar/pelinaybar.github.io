@@ -1,5 +1,6 @@
 "use client";
 
+import { LOGO_LIBRARY_VERSION, migrateLogoLibrary } from "./logo-library";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import {validateProject,duplicateKey,campusText,validDate,projectSignature} from "./studio-model";
@@ -484,8 +485,8 @@ export default function Home() {
   function persistProject(p){if(!hydrated.current||conflictRef.current)return;try{let existing;try{existing=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");}catch{}if(existing&&projectSignature(existing)===projectSignature(p)){setSaveStatus("Kaydedildi");return;}localStorage.setItem(DRAFT_KEY,JSON.stringify({...p,savedAt:new Date().toISOString(),writer:writerId.current}));setSaveStatus("Kaydedildi");}catch{setSaveStatus("Kaydedilemedi · Proje yedeği indirin");setNotice("Depolama dolu. Proje yedeğini indirin; Proje yedeği ekranından otomatik geçmişi temizleyebilirsiniz.");}}
   const [undoVersion,setUndoVersion]=useState(0);
   projectRef.current={events,logos,background,settings};
-  function applyProject(p){projectRef.current=p;rawSetEvents(p.events);rawSetLogos(p.logos||{});rawSetBackground(p.background??"");rawSetSettings(p.settings||{logoShape:"circle"});setSelected(current=>p.events.some(e=>e.id===current)?current:(p.events[0]?.id||""));}
-  function commitProject(patch){if(conflictRef.current||exportLock.current)return;const prev=projectRef.current;if(Object.entries(patch).every(([k,v])=>prev[k]===v))return;const next={...prev,...patch};const focused=document.activeElement,field=focused?.matches('input,textarea')?(selected+":"+(focused.getAttribute('aria-label')||focused.closest('label')?.textContent||focused.tagName)):"";const now=Date.now();if(!field||lastUndo.current.field!==field||now-lastUndo.current.at>1200)undoRef.current=[...undoRef.current,prev].slice(-40);lastUndo.current={at:now,field};redoRef.current=[];applyProject(next);persistProject(next);setUndoVersion(v=>v+1);}
+  function applyProject(p){p=migrateLogoLibrary(p);p={...p,logos:{...builtinLogos.current,...p.logos}};projectRef.current=p;rawSetEvents(p.events);rawSetLogos(p.logos||{});rawSetBackground(p.background??"");rawSetSettings(p.settings||{logoShape:"circle"});setSelected(current=>p.events.some(e=>e.id===current)?current:(p.events[0]?.id||""));}
+  function commitProject(patch){if(conflictRef.current||exportLock.current)return;const prev=projectRef.current;if(Object.entries(patch).every(([k,v])=>prev[k]===v))return;const next={...prev,...patch};const focused=document.activeElement,field=focused?.matches('input,textarea')?(selected+":"+(focused.getAttribute('aria-label')||focused.closest('label')?.textContent||focused.tagName)):"";const now=Date.now();if(!field||lastUndo.current.field!==field||now-lastUndo.current.at>1200)undoRef.current=[...undoRef.current,prev].slice(-40);lastUndo.current={at:now,field};redoRef.current=[];applyProject(next);persistProject(projectRef.current);setUndoVersion(v=>v+1);}
   function setEvents(value){commitProject({events:typeof value==="function"?value(projectRef.current.events):value});}
   function setLogos(value){commitProject({logos:typeof value==="function"?value(projectRef.current.logos):value});}
   function setBackground(value){commitProject({background:typeof value==="function"?value(projectRef.current.background):value});}
@@ -552,13 +553,14 @@ export default function Home() {
     try {
       writerId.current=crypto.randomUUID();
       const raw = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-      const checked=raw?validateProject(raw):null,saved=checked?.project;
+      const checked=raw?validateProject(raw):null,saved=checked?.project?migrateLogoLibrary(checked.project):null;
       if(checked?.warnings.length)setNotice(checked.warnings.join(" "));
       const savedHistory = readHistory(JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"));
       if (Array.isArray(saved?.events)) {
         rawSetEvents(saved.events);
         setSelected(saved.events[0]?.id||"");
       }
+      if(!saved)rawSetSettings(current=>({...current,logoLibraryVersion:LOGO_LIBRARY_VERSION}));
       if (saved?.logos) rawSetLogos((current) => ({ ...current, ...saved.logos }));
       if (typeof saved?.background==="string") rawSetBackground(saved.background);
       if(saved?.settings){const old=JSON.parse(localStorage.getItem("sks-share-edits-v1")||"null");rawSetSettings({...saved.settings,...(!Object.keys(saved.settings.shareDraft?.texts||{}).length&&old?.texts?{shareDraft:old}:{})});}
@@ -621,7 +623,7 @@ export default function Home() {
     return () => o.disconnect();
   }, [f.w, f.h,zoomMode,focusPreview]);
   useEffect(() => {
-    fetch(`${PUBLIC_BASE}/logo-eslestirme-tablosu.csv`)
+    fetch(`${PUBLIC_BASE}/logo-eslestirme-tablosu.csv?v=${LOGO_LIBRARY_VERSION}`)
       .then((r) => {if(!r.ok)throw new Error("Logo listesi yüklenemedi");return r.text();})
       .then((text) => {
         const builtins: Record<string, string> = {},names={};
@@ -634,7 +636,7 @@ export default function Home() {
             if (comma < 1) return;
             const file = line.slice(0, comma).trim(),
               name = line.slice(comma + 1).trim();
-            if(file&&name){builtins[normalize(name)]=`${PUBLIC_BASE}/logos/${file}`;names[normalize(name)]=name;}
+            if(file&&name){builtins[normalize(name)]=`${PUBLIC_BASE}/logos/${file}?v=${LOGO_LIBRARY_VERSION}`;names[normalize(name)]=name;}
           });
         setLogoNames(names);builtinLogos.current=builtins;rawSetLogos((current) => ({ ...builtins, ...current }));
       })

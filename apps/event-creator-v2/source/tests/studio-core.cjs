@@ -21,3 +21,20 @@ const round=c.readHistory(c.packHistory([checked.project]));assert.equal(round[0
 console.log('27 additional normalization, scoped edit, overnight, schema, backup and 2000-row assertions passed');
 assert.equal(m.projectSignature({events:rows,logos:{b:'2',a:'1'},settings:{logoShape:'circle'},savedAt:'old'}),m.projectSignature({settings:{shareDraft:{texts:{},key:''},logoShape:'circle'},logos:{a:'1',b:'2'},events:rows,savedAt:'new',writer:'other'}));assert.notEqual(m.projectSignature({events:rows}),m.projectSignature({events:replaced}));console.log('2 cross-tab content comparison assertions passed');
 const settingsCheck=m.validateProject({events:rows,settings:{pushTitleLimit:-2,pushBodyLimit:'bad',pushLink:'javascript:alert(1)',trimLogos:'false',importReport:{sheet:'Pelin',rows:[{line:2,included:true}]}}}).project.settings;assert.equal(settingsCheck.pushTitleLimit,60);assert.equal(settingsCheck.pushBodyLimit,180);assert.equal(settingsCheck.pushLink,'');assert.equal(settingsCheck.trimLogos,false);assert.equal(settingsCheck.importReport.sheet,'Pelin');console.log('5 settings and import report assertions passed');
+const library=moduleLoad('logo-library');
+const legacy={events:[{...ok,id:'old',logoOverride:'data:image/png;base64,old'}],logos:{old:'old-logo'},background:'',settings:{logoShape:'square'}};
+const migrated=library.migrateLogoLibrary(legacy);
+assert.equal(Object.keys(migrated.logos).length,0);
+assert.equal(migrated.events[0].logoOverride,undefined);
+assert.equal(migrated.events[0].title,ok.title);
+assert.equal(migrated.settings.logoShape,'square');
+assert.equal(library.migrateLogoLibrary(migrated),migrated);
+assert.equal(m.validateProject(migrated).project.settings.logoLibraryVersion,library.LOGO_LIBRARY_VERSION);
+const csv=fs.readFileSync(require('node:path').join(__dirname,'../public/logo-eslestirme-tablosu.csv'),'utf8').replace(/^\uFEFF/,'').trim().split(/\r?\n/).slice(1),libraryLogos={};
+assert.equal(csv.length,95);
+for(const line of csv){const comma=line.indexOf(','),file=line.slice(0,comma),name=line.slice(comma+1);const data=fs.readFileSync(require('node:path').join(__dirname,'../public/logos',file));assert.equal(data.readUInt32BE(16),512);assert.equal(data.readUInt32BE(20),512);libraryLogos[c.clubKey(name)]='/logos/'+file;}
+assert.equal(Object.keys(libraryLogos).length,95);
+for(const line of csv)assert.equal(c.resolveLogo(line.slice(line.indexOf(',')+1),libraryLogos).status,'exact');
+assert.ok(c.resolveLogo('Avrupa Tıp Öğrencileri Birliği Kulübü',libraryLogos).src);
+assert.ok(c.resolveLogo('Üsküdar Çeviri Kulübü',libraryLogos).src);
+console.log('95 PNG dimensions, club matches and one-time logo memory migration passed');
