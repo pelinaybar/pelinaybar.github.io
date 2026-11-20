@@ -553,9 +553,10 @@ export default function Home() {
     try {
       writerId.current=crypto.randomUUID();
       const raw = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-      const checked=raw?validateProject(raw):null,saved=checked?.project?migrateLogoLibrary(checked.project):null;
+      const checked=raw?validateProject(raw):null;
       if(checked?.warnings.length)setNotice(checked.warnings.join(" "));
       const savedHistory = readHistory(JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"));
+      const saved=checked?.project?migrateLogoLibrary(checked.project,savedHistory):null;
       if (Array.isArray(saved?.events)) {
         rawSetEvents(saved.events);
         setSelected(saved.events[0]?.id||"");

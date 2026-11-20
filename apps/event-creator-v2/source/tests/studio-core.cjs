@@ -22,7 +22,7 @@ console.log('27 additional normalization, scoped edit, overnight, schema, backup
 assert.equal(m.projectSignature({events:rows,logos:{b:'2',a:'1'},settings:{logoShape:'circle'},savedAt:'old'}),m.projectSignature({settings:{shareDraft:{texts:{},key:''},logoShape:'circle'},logos:{a:'1',b:'2'},events:rows,savedAt:'new',writer:'other'}));assert.notEqual(m.projectSignature({events:rows}),m.projectSignature({events:replaced}));console.log('2 cross-tab content comparison assertions passed');
 const settingsCheck=m.validateProject({events:rows,settings:{pushTitleLimit:-2,pushBodyLimit:'bad',pushLink:'javascript:alert(1)',trimLogos:'false',importReport:{sheet:'Pelin',rows:[{line:2,included:true}]}}}).project.settings;assert.equal(settingsCheck.pushTitleLimit,60);assert.equal(settingsCheck.pushBodyLimit,180);assert.equal(settingsCheck.pushLink,'');assert.equal(settingsCheck.trimLogos,false);assert.equal(settingsCheck.importReport.sheet,'Pelin');console.log('5 settings and import report assertions passed');
 const library=moduleLoad('logo-library');
-const legacy={events:[{...ok,id:'old',logoOverride:'data:image/png;base64,old'}],logos:{old:'old-logo'},background:'',settings:{logoShape:'square'}};
+const legacy={events:[{...ok,id:'old',logoOverride:'invalid-old-override'}],logos:{old:'old-logo'},background:'',settings:{logoShape:'square'}};
 const migrated=library.migrateLogoLibrary(legacy);
 assert.equal(Object.keys(migrated.logos).length,0);
 assert.equal(migrated.events[0].logoOverride,undefined);
@@ -39,3 +39,17 @@ assert.ok(c.resolveLogo('Avrupa Tıp Öğrencileri Birliği Kulübü',libraryLog
 assert.ok(c.resolveLogo('Üsküdar Çeviri Kulübü',libraryLogos).src);
 assert.ok(c.resolveLogo('İlk ve Acil Yardım',libraryLogos).src);
 console.log('97 PNG dimensions, club matches and one-time logo memory migration passed');
+
+const customLogo='data:image/png;base64,custom';
+const officialKey=c.clubKey('Kızılay Kulübü');
+const historicalKey=c.clubKey('Üsküdar Bilişim Kulübü');
+const customProject={...legacy,events:[{...ok,id:'historical',club:'Üsküdar Bilişim Kulübü',logoOverride:customLogo}],logos:{[officialKey]:customLogo,[historicalKey]:customLogo}};
+const retained=library.migrateLogoLibrary(customProject);
+assert.equal(retained.logos[officialKey],undefined);
+assert.equal(retained.logos[historicalKey],customLogo);
+assert.equal(retained.events[0].logoOverride,customLogo);
+const recovered=library.migrateLogoLibrary({...customProject,logos:{},events:customProject.events.map(({logoOverride,...e})=>e)},[customProject]);
+assert.equal(recovered.logos[historicalKey],customLogo);
+assert.equal(recovered.events[0].logoOverride,customLogo);
+assert.equal(recovered.events[0].title,ok.title);
+console.log('6 historical custom-logo preservation and recovery assertions passed');
