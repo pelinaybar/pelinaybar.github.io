@@ -1,11 +1,11 @@
 ﻿fileName,displayName
 adli_bilimler_ve_ceza_adaleti_kulubu.png,ADLİ BİLİMLER VE CEZA ADALETİ KULÜBÜ
+ameliyathane_hizmetleri_kulubu.png,AMELİYATHANE HİZMETLERİ KULÜBÜ
 anestezi_kulubu.png,ANESTEZİ KULÜBÜ
 animasyon_kulubu.png,ANİMASYON KULÜBÜ
 avrupa_tip_ogrencileri_birligi_kulubu_emsa.png,AVRUPA TIP ÖĞRENCİLERİ BİRLİĞİ KULÜBÜ (EMSA)
 beslenme_ve_diyetetik_kulubu.png,BESLENME VE DİYETETİK KULÜBÜ
 bilim_kurgu_ve_fantastik_kultur_kulubu.png,BİLİM KURGU VE FANTASTİK KÜLTÜR KULÜBÜ
-bilimsel_arastirma_kulubu.png,BİLİMSEL ARAŞTIRMA KULÜBÜ
 bir_bakim_bir_dokunus_kulubu.png,BİR BAKIM BİR DOKUNUŞ KULÜBÜ
 biyoteknoloji_ve_biyomuhendislik_kulubu.png,BİYOTEKNOLOJİ VE BİYOMÜHENDİSLİK KULÜBÜ
 bobrek_dostlari_kulubu.png,BÖBREK DOSTLARI KULÜBÜ
@@ -14,9 +14,9 @@ cagin_vicdani_kulubu.png,ÇAĞIN VİCDANI KULÜBÜ
 cocuk_gelisimi_kulubu.png,ÇOCUK GELİŞİMİ KULÜBÜ
 cocuk_hizmetleri_kulubu.png,ÇOCUK HİZMETLERİ KULÜBÜ
 dans_kulubu.png,DANS KULÜBÜ
+dijital_donusum_kulubu.png,DİJİTAL DÖNÜŞÜM KULÜBÜ
 dil_ve_konusma_terapisi_kulubu.png,DİL VE KONUŞMA TERAPİSİ KULÜBÜ
 dis_hekimligi_kultur_ve_gelisim_kulubu.png,DİŞ HEKİMLİĞİ KÜLTÜR VE GELİŞİM KULÜBÜ
-dis_hekimligi_ve_ogrenci_birligi_kulubu.png,DİŞ HEKİMLİĞİ VE ÖĞRENCİ BİRLİĞİ KULÜBÜ
 dis_protez_kulubu.png,DİŞ PROTEZ KULÜBÜ
 doga_sporlari_kulubu.png,DOĞA SPORLARI KULÜBÜ
 ekovizyon_kulubu.png,EKOVİZYON KULÜBÜ
@@ -36,48 +36,49 @@ genc_tibbiyeliler_kulubu.png,GENÇ TIBBİYELİLER KULÜBÜ
 genc_yeryuzu_doktorlari_kulubu.png,GENÇ YERYÜZÜ DOKTORLARI KULÜBÜ
 genc_yesilay_kulubu.png,GENÇ YEŞİLAY KULÜBÜ
 genclik_kulubu.png,GENÇLİK KULÜBÜ
+geropsikoloji_kulubu.png,GEROPSİKOLOJİ KULÜBÜ
 gida_kulubu.png,GIDA KULÜBÜ
 google_developer_groups_on_campus_kulubu.png,GOOGLE DEVELOPER GROUPS ON CAMPUS KULÜBÜ
+guc_istenci_dostluk_ve_dayanisma_kulubu.png,GÜÇ İSTENCİ DOSTLUK VE DAYANIŞMA KULÜBÜ
 haydi_tut_elimi_kulubu.png,HAYDİ TUT ELİMİ KULÜBÜ
+hayvanlari_koruma_kulubu.png,HAYVANLARI KORUMA KULÜBÜ
 hemsirelik_kulubu.png,HEMŞİRELİK KULÜBÜ
 ieee_ogrenci_kolu_kulubu.png,IEEE ÖĞRENCİ KOLU KULÜBÜ
 intercultural_kulubu.png,INTERCULTURAL KULÜBÜ
-ilk_ve_acil_yardim.png,İLK VE ACİL YARDIM
-iyiligin_gelecegi_kulubu.png,İYİLİĞİN GELECEĞİ KULÜBÜ
+ilk_ve_acil_yardim_kulubu.png,İLK VE ACİL YARDIM KULÜBÜ
 kalite_kulubu.png,KALİTE KULÜBÜ
 kizilay_kulubu.png,KIZILAY KULÜBÜ
 kolektif_kulubu.png,KOLEKTİF KULÜBÜ
-kulturel_kesif_kulubu.png,KÜLTÜREL KEŞİF KULÜBÜ
 laboratuvar_teknikerligi_kulubu.png,LABORATUVAR TEKNİKERLİĞİ KULÜBÜ
 losemili_cocuklara_fayda_kulubu.png,LÖSEMİLİ ÇOCUKLARA FAYDA KULÜBÜ
-meclis_kursusu_kulubu.png,MECLİS KÜRSÜSÜ KULÜBÜ
-milli_miras_kulubu.png,MİLLİ MİRAS KULÜBÜ
 model_birlesmis_milletler_kulubu.png,MODEL BİRLEŞMİŞ MİLLETLER KULÜBÜ
 molekuler_biyoloji_ve_genetik_kulubu.png,MOLEKÜLER BİYOLOJİ VE GENETİK KULÜBÜ
 mucizeye_ilk_dokunus_kulubu.png,MUCİZEYE İLK DOKUNUŞ KULÜBÜ
 muzik_kulubu.png,MÜZİK KULÜBÜ
+noropsikoloji_kulubu.png,NÖROPSİKOLOJİ KULÜBÜ
 odyoloji_kulubu.png,ODYOLOJİ KULÜBÜ
 okculuk_kulubu.png,OKÇULUK KULÜBÜ
 ombudsman_kulubu.png,OMBUDSMAN KULÜBÜ
 perfuzyon_kulubu.png,PERFÜZYON KULÜBÜ
 podoloji_kulubu.png,PODOLOJİ KULÜBÜ
+politika_ve_analiz_kulubu.png,POLİTİKA VE ANALİZ KULÜBÜ
 pozitif_psikoloji_kulubu.png,POZİTİF PSİKOLOJİ KULÜBÜ
 psikoloji_kulubu.png,PSİKOLOJİ KULÜBÜ
 saglik_yonetimi_kulubu.png,SAĞLIK YÖNETİMİ KULÜBÜ
 saglikta_enformasyon_dijitallesme_ve_yonetim.png,SAĞLIKTA ENFORMASYON DİJİTALLEŞME VE YÖNETİM
+satir_arasi_okuma_yazma_ve_atolye_kulubu.png,SATIR ARASI OKUMA – YAZMA VE ATÖLYE KULÜBÜ
 senaryo_bazli_isg_kulubu.png,SENARYO BAZLI İSG KULÜBÜ
 sessizligi_boz_kulubu.png,SESSİZLİĞİ BOZ KULÜBÜ
 sinema_kulubu.png,SİNEMA KULÜBÜ
 sivil_savunma_kulubu.png,SİVİL SAVUNMA KULÜBÜ
 sosyal_hizmet_kulubu.png,SOSYAL HİZMET KULÜBÜ
 sosyoloji_kulubu.png,SOSYOLOJİ KULÜBÜ
-stem_projects_kulubu.png,STEM PROJECTS KULÜBÜ
 stratejik_arastirmalar_ve_gelistirme_kulubu.png,STRATEJİK ARAŞTIRMALAR VE GELİŞTİRME KULÜBÜ
 surdurulebilir_kalkinma_kulubu.png,SÜRDÜRÜLEBİLİR KALKINMA KULÜBÜ
 tarih_kulubu.png,TARİH KULÜBÜ
 tarih_ve_kultur_kulubu.png,TARİH VE KÜLTÜR KULÜBÜ
 tasarim_kulubu.png,TASARIM KULÜBÜ
-the_people_s_kulubu.png,THE PEOPLE'S KULÜBÜ
+the_peoples_kulubu.png,THE PEOPLE'S KULÜBÜ
 tiyatro_kulubu.png,TİYATRO KULÜBÜ
 turkce_konusma_kulubu.png,TÜRKÇE KONUŞMA KULÜBÜ
 uluslararasi_diplomasi_kulubu.png,ULUSLARARASI DİPLOMASİ KULÜBÜ
@@ -88,6 +89,7 @@ uskudar_tip_ogrencileri_birligi_kulubu.png,ÜSKÜDAR TIP ÖĞRENCİLERİ BİRLİ
 uskudar_universitesi_cansagligi_kulubu.png,ÜSKÜDAR ÜNİVERSİTESİ CANSAĞLIĞI KULÜBÜ
 uskudar_universitesi_nadir_hastaliklar_kulubu.png,ÜSKÜDAR ÜNİVERSİTESİ NADİR HASTALIKLAR KULÜBÜ
 uskudar_universitesi_spor_kulubu.png,ÜSKÜDAR ÜNİVERSİTESİ SPOR KULÜBÜ
+uskudar_universitesi_teknofest_kulubu.png,ÜSKÜDAR ÜNİVERSİTESİ TEKNOFEST KULÜBÜ
 uskudar_universitesi_teknoloji_ve_inovasyon_kulubu.png,ÜSKÜDAR ÜNİVERSİTESİ TEKNOLOJİ VE İNOVASYON KULÜBÜ
 yapay_zeka_kulubu.png,YAPAY ZEKA KULÜBÜ
 yeni_medya_kulubu.png,YENİ MEDYA KULÜBÜ

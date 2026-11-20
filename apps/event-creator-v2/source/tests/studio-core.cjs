@@ -31,10 +31,11 @@ assert.equal(migrated.settings.logoShape,'square');
 assert.equal(library.migrateLogoLibrary(migrated),migrated);
 assert.equal(m.validateProject(migrated).project.settings.logoLibraryVersion,library.LOGO_LIBRARY_VERSION);
 const csv=fs.readFileSync(require('node:path').join(__dirname,'../public/logo-eslestirme-tablosu.csv'),'utf8').replace(/^\uFEFF/,'').trim().split(/\r?\n/).slice(1),libraryLogos={};
-assert.equal(csv.length,95);
+assert.equal(csv.length,97);
 for(const line of csv){const comma=line.indexOf(','),file=line.slice(0,comma),name=line.slice(comma+1);const data=fs.readFileSync(require('node:path').join(__dirname,'../public/logos',file));assert.equal(data.readUInt32BE(16),512);assert.equal(data.readUInt32BE(20),512);libraryLogos[c.clubKey(name)]='/logos/'+file;}
-assert.equal(Object.keys(libraryLogos).length,95);
+assert.equal(Object.keys(libraryLogos).length,97);
 for(const line of csv)assert.equal(c.resolveLogo(line.slice(line.indexOf(',')+1),libraryLogos).status,'exact');
 assert.ok(c.resolveLogo('Avrupa Tıp Öğrencileri Birliği Kulübü',libraryLogos).src);
 assert.ok(c.resolveLogo('Üsküdar Çeviri Kulübü',libraryLogos).src);
-console.log('95 PNG dimensions, club matches and one-time logo memory migration passed');
+assert.ok(c.resolveLogo('İlk ve Acil Yardım',libraryLogos).src);
+console.log('97 PNG dimensions, club matches and one-time logo memory migration passed');
